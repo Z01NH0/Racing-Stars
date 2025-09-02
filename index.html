@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corrida de Obstáculos</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #222;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            background-color: #000;
+            overflow: hidden;
+            border: 2px solid #444;
+        }
+        
+        #divider {
+            position: absolute;
+            top: 0;
+            left: 195px;
+            width: 10px;
+            height: 100%;
+            background-color: #8B4513; /* Marrom */
+            z-index: 1;
+        }
+        
+        .player {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            z-index: 2;
+        }
+        
+        #player1 {
+            background-color: blue;
+            top: 50px;
+            left: 100px;
+        }
+        
+        #player2 {
+            background-color: red;
+            top: 520px;
+            left: 270px;
+        }
+        
+        .health-bar {
+            position: absolute;
+            width: 100px;
+            height: 10px;
+            background-color: #333;
+            border: 1px solid #fff;
+            z-index: 3;
+        }
+        
+        .health-fill {
+            height: 100%;
+            background-color: green;
+            width: 100%;
+        }
+        
+        #health1 {
+            top: 10px;
+            left: 10px;
+        }
+        
+        #health2 {
+            bottom: 10px;
+            right: 10px;
+        }
+        
+        .obstacle {
+            position: absolute;
+            z-index: 2;
+        }
+        
+        .triangle {
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-bottom: 30px solid pink;
+        }
+        
+        .rectangle {
+            width: 30px;
+            height: 20px;
+            background-color: pink;
+        }
+        
+        .lane {
+            position: absolute;
+            width: 100%;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        #start-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        #start-btn:hover {
+            background-color: #45a049;
+        }
+        
+        #speed-display {
+            margin-top: 10px;
+            color: white;
+            font-size: 16px;
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 32px;
+            text-align: center;
+            display: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="divider"></div>
+        <div id="player1" class="player"></div>
+        <div id="player2" class="player"></div>
+        
+        <div id="health1" class="health-bar">
+            <div id="health-fill1" class="health-fill"></div>
+        </div>
+        
+        <div id="health2" class="health-bar">
+            <div id="health-fill2" class="health-fill"></div>
+        </div>
+        
+        <div id="game-over"></div>
+    </div>
+    
+    <button id="start-btn">Corra!</button>
+    <div id="speed-display">Velocidade: 1.0x</div>
+
+    <script>
+        // Configurações do jogo
+        const gameConfig = {
+            speed: 1,
+            maxSpeed: 5,
+            playerHealth: 100,
+            botHealth: 100,
+            obstacleDamage: 10,
+            gameRunning: false,
+            playerPosition: 'middle', // top, middle, bottom
+            botPosition: 'middle',
+            obstacles: [],
+            nextObstacleTime: 0,
+            playerLane: 1, // 0: top, 1: middle, 2: bottom
+            botLane: 1,
+            score: 0
+        };
+        
+        // Elementos do DOM
+        const gameContainer = document.getElementById('game-container');
+        const player1 = document.getElementById('player1');
+        const player2 = document.getElementById('player2');
+        const healthFill1 = document.getElementById('health-fill1');
+        const healthFill2 = document.getElementById('health-fill2');
+        const startBtn = document.getElementById('start-btn');
+        const speedDisplay = document.getElementById('speed-display');
+        const gameOverDisplay = document.getElementById('game-over');
+        
+        // Inicializar pistas
+        function initLanes() {
+            const lanePositions = [120, 300, 480]; // Posições Y das pistas
+            
+            for (let i = 0; i < 20; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const lane = document.createElement('div');
+                    lane.className = 'lane';
+                    lane.style.top = `${i * 30 + lanePositions[j]}px`;
+                    gameContainer.appendChild(lane);
+                }
+            }
+            
+            // Posicionar jogadores nas pistas do meio
+            player1.style.top = `${lanePositions[1] - 15}px`;
+            player2.style.top = `${lanePositions[1] - 15}px`;
+        }
+        
+        // Gerar obstáculos
+        function generateObstacle() {
+            if (!gameConfig.gameRunning) return;
+            
+            const now = Date.now();
+            if (now < gameConfig.nextObstacleTime) return;
+            
+            // Tempo até o próximo obstáculo (entre 0.5 e 1.5 segundos)
+            gameConfig.nextObstacleTime = now + 500 + Math.random() * 1000;
+            
+            // Escolher tipo de obstáculo (triângulo ou retângulo)
+            const isTriangle = Math.random() > 0.5;
+            const obstacle = document.createElement('div');
+            obstacle.className = `obstacle ${isTriangle ? 'triangle' : 'rectangle'}`;
+            
+            // Escolher pista (0, 1 ou 2)
+            const lane = Math.floor(Math.random() * 3);
+            const lanePositions = [120, 300, 480];
+            
+            // Posicionar obstáculo
+            obstacle.style.top = `${lanePositions[lane] - (isTriangle ? 15 : 10)}px`;
+            obstacle.style.left = '400px';
+            
+            gameContainer.appendChild(obstacle);
+            
+            // Adicionar aos obstáculos ativos
+            gameConfig.obstacles.push({
+                element: obstacle,
+                lane: lane,
+                type: isTriangle ? 'triangle' : 'rectangle',
+                x: 400,
+                y: lanePositions[lane] - (isTriangle ? 15 : 10)
+            });
+        }
+        
+        // Atualizar obstáculos
+        function updateObstacles() {
+            if (!gameConfig.gameRunning) return;
+            
+            for (let i = gameConfig.obstacles.length - 1; i >= 0; i--) {
+                const obstacle = gameConfig.obstacles[i];
+                obstacle.x -= 5 * gameConfig.speed;
+                obstacle.element.style.left = `${obstacle.x}px`;
+                
+                // Verificar colisão com jogador
+                if (obstacle.x < 130 && obstacle.x > 70) {
+                    if (obstacle.lane === gameConfig.playerLane) {
+                        takeDamage('player');
+                    }
+                    
+                    if (obstacle.lane === gameConfig.botLane) {
+                        takeDamage('bot');
+                    }
+                }
+                
+                // Remover obstáculos que saíram da tela
+                if (obstacle.x < -30) {
+                    gameContainer.removeChild(obstacle.element);
+                    gameConfig.obstacles.splice(i, 1);
+                    gameConfig.score++;
+                }
+            }
+        }
+        
+        // Lógica de dano
+        function takeDamage(target) {
+            if (target === 'player') {
+                gameConfig.playerHealth -= gameConfig.obstacleDamage;
+                healthFill1.style.width = `${gameConfig.playerHealth}%`;
+                
+                if (gameConfig.playerHealth <= 0) {
+                    endGame('Bot venceu!');
+                }
+            } else {
+                gameConfig.botHealth -= gameConfig.obstacleDamage;
+                healthFill2.style.width = `${gameConfig.botHealth}%`;
+                
+                if (gameConfig.botHealth <= 0) {
+                    endGame('Você venceu!');
+                }
+            }
+        }
+        
+        // IA do bot
+        function updateBot() {
+            if (!gameConfig.gameRunning) return;
+            
+            // Verificar se há obstáculos próximos na pista do bot
+            const imminentObstacle = gameConfig.obstacles.find(obs => 
+                obs.lane === gameConfig.botLane && obs.x < 350 && obs.x > 200
+            );
+            
+            if (imminentObstacle) {
+                // Tentar desviar
+                const possibleLanes = [0, 1, 2].filter(lane => lane !== gameConfig.botLane);
+                const safeLane = possibleLanes.find(lane => 
+                    !gameConfig.obstacles.some(obs => 
+                        obs.lane === lane && obs.x < 350 && obs.x > 200
+                    )
+                );
+                
+                if (safeLane !== undefined) {
+                    gameConfig.botLane = safeLane;
+                    const lanePositions = [120, 300, 480];
+                    player2.style.top = `${lanePositions[safeLane] - 15}px`;
+                }
+            } else {
+                // Se não houver obstáculos, voltar para a pista do meio
+                if (gameConfig.botLane !== 1) {
+                    gameConfig.botLane = 1;
+                    player2.style.top = `${300 - 15}px`;
+                }
+            }
+        }
+        
+        // Finalizar jogo
+        function endGame(message) {
+            gameConfig.gameRunning = false;
+            gameOverDisplay.textContent = `${message} Pontuação: ${gameConfig.score}`;
+            gameOverDisplay.style.display = 'block';
+            startBtn.textContent = 'Jogar Novamente';
+        }
+        
+        // Loop principal do jogo
+        function gameLoop() {
+            if (gameConfig.gameRunning) {
+                generateObstacle();
+                updateObstacles();
+                updateBot();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Iniciar o jogo
+        function startGame() {
+            if (gameConfig.gameRunning) {
+                // Aumentar velocidade
+                gameConfig.speed = Math.min(gameConfig.speed + 0.5, gameConfig.maxSpeed);
+                speedDisplay.textContent = `Velocidade: ${gameConfig.speed.toFixed(1)}x`;
+                return;
+            }
+            
+            // Reiniciar o jogo
+            gameConfig.speed = 1;
+            gameConfig.playerHealth = 100;
+            gameConfig.botHealth = 100;
+            gameConfig.obstacles = [];
+            gameConfig.gameRunning = true;
+            gameConfig.playerLane = 1;
+            gameConfig.botLane = 1;
+            gameConfig.score = 0;
+            
+            healthFill1.style.width = '100%';
+            healthFill2.style.width = '100%';
+            gameOverDisplay.style.display = 'none';
+            startBtn.textContent = 'Corra!';
+            speedDisplay.textContent = 'Velocidade: 1.0x';
+            
+            // Remover obstáculos antigos
+            document.querySelectorAll('.obstacle').forEach(obs => obs.remove());
+            
+            // Reposicionar jogadores
+            player1.style.top = '285px'; // 300 - 15
+            player2.style.top = '285px';
+        }
+        
+        // Controles do teclado
+        document.addEventListener('keydown', (e) => {
+            if (!gameConfig.gameRunning) return;
+            
+            const lanePositions = [120, 300, 480];
+            
+            if (e.key === 'w' || e.key === 'W') {
+                // Mover para cima
+                gameConfig.playerLane = Math.max(0, gameConfig.playerLane - 1);
+                player1.style.top = `${lanePositions[gameConfig.playerLane] - 15}px`;
+            } else if (e.key === 's' || e.key === 'S') {
+                // Mover para baixo
+                gameConfig.playerLane = Math.min(2, gameConfig.playerLane + 1);
+                player1.style.top = `${lanePositions[gameConfig.playerLane] - 15}px`;
+            }
+        });
+        
+        // Botão de iniciar/aumentar velocidade
+        startBtn.addEventListener('click', startGame);
+        
+        // Inicializar o jogo
+        initLanes();
+        gameLoop();
+    </script>
+</body>
+</html>
