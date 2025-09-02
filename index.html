@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maratona de Obstáculos</title>
+    <title>Racing Stars</title>
     <style>
         * {
             margin: 0;
@@ -18,7 +18,7 @@
             align-items: center;
             flex-direction: column;
             min-height: 100vh;
-            background: linear-gradient(to bottom, #1a1a1a, #2a2a2a);
+            background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: white;
             padding: 20px;
@@ -26,28 +26,30 @@
         }
         
         h1 {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             text-align: center;
             color: #4fe0ff;
-            text-shadow: 0 0 10px rgba(79, 224, 255, 0.7);
-            font-size: 2.2rem;
+            text-shadow: 0 0 15px rgba(79, 224, 255, 0.9);
+            font-size: 2.8rem;
+            letter-spacing: 2px;
         }
         
         #game-container {
             position: relative;
-            width: 800px;
-            height: 600px;
-            border-radius: 10px;
+            width: 1500px;
+            height: 450px;
+            border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 0 25px rgba(0, 0, 0, 0.8);
-            margin-bottom: 20px;
+            box-shadow: 0 0 35px rgba(0, 0, 0, 0.9);
+            margin-bottom: 25px;
+            border: 3px solid rgba(79, 224, 255, 0.3);
         }
         
         #track {
             position: absolute;
             width: 100%;
             height: 100%;
-            background: linear-gradient(to bottom, #2d2d2d, #1a1a1a);
+            background: linear-gradient(to bottom, #1e1e2a, #252536);
             overflow: hidden;
         }
         
@@ -60,9 +62,9 @@
             background: repeating-linear-gradient(
                 to bottom,
                 transparent,
-                transparent 20px,
-                rgba(255, 255, 255, 0.03) 20px,
-                rgba(255, 255, 255, 0.03) 40px
+                transparent 30px,
+                rgba(255, 255, 255, 0.04) 30px,
+                rgba(255, 255, 255, 0.04) 60px
             );
         }
         
@@ -72,16 +74,16 @@
             top: 0;
             left: 0;
             width: 100%;
-            height: 5px;
+            height: 6px;
             background: repeating-linear-gradient(
                 90deg,
                 #8B4513,
-                #8B4513 15px,
-                #A0522D 15px,
-                #A0522D 30px
+                #8B4513 20px,
+                #A0522D 20px,
+                #A0522D 40px
             );
             z-index: 2;
-            box-shadow: 0 0 10px rgba(139, 69, 19, 0.7);
+            box-shadow: 0 0 15px rgba(139, 69, 19, 0.8);
         }
         
         .player-area {
@@ -93,42 +95,42 @@
         
         #player-area {
             top: 0;
-            border-bottom: 2px solid #8B4513;
+            border-bottom: 3px solid #8B4513;
         }
         
         #bot-area {
             bottom: 0;
-            border-top: 2px solid #8B4513;
+            border-top: 3px solid #8B4513;
         }
         
         /* Linhas da pista - azuis para jogador */
         .player-lane {
             position: absolute;
             width: 100%;
-            height: 2px;
+            height: 3px;
             background: repeating-linear-gradient(
                 90deg,
                 transparent,
-                transparent 15px,
-                #0074D9 15px,
-                #0074D9 20px
+                transparent 20px,
+                #0074D9 20px,
+                #0074D9 25px
             );
-            box-shadow: 0 0 8px rgba(0, 116, 217, 0.6);
+            box-shadow: 0 0 12px rgba(0, 116, 217, 0.7);
         }
         
         /* Linhas da pista - vermelhas para bot */
         .bot-lane {
             position: absolute;
             width: 100%;
-            height: 2px;
+            height: 3px;
             background: repeating-linear-gradient(
                 90deg,
                 transparent,
-                transparent 15px,
-                #FF4136 15px,
-                #FF4136 20px
+                transparent 20px,
+                #FF4136 20px,
+                #FF4136 25px
             );
-            box-shadow: 0 0 8px rgba(255, 65, 54, 0.6);
+            box-shadow: 0 0 12px rgba(255, 65, 54, 0.7);
         }
         
         /* Corredores */
@@ -136,50 +138,59 @@
             position: absolute;
             width: 30px;
             height: 30px;
-            border-radius: 6px;
+            border-radius: 10px 10px 5px 5px;
             z-index: 10;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
             display: flex;
             justify-content: center;
             align-items: center;
             font-weight: bold;
             color: white;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
         }
         
         #player {
-            background: linear-gradient(135deg, #0074D9, #005caf);
-            box-shadow: 0 0 15px rgba(0, 116, 217, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.3);
-            top: 135px;
-            left: 385px;
+            background: linear-gradient(135deg, #0074D9, #005caf, #0074D9);
+            box-shadow: 0 0 20px rgba(0, 116, 217, 0.9), 
+                        inset 0 0 15px rgba(255, 255, 255, 0.4),
+                        0 5px 10px rgba(0, 0, 0, 0.5);
+            top: 150px;
+            left: 300px;
         }
         
         #player::after {
             content: 'J';
+            font-size: 22px;
+            margin-top: -5px;
         }
         
         #bot {
-            background: linear-gradient(135deg, #FF4136, #cc2b20);
-            box-shadow: 0 0 15px rgba(255, 65, 54, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.3);
-            bottom: 135px;
-            left: 385px;
+            background: linear-gradient(135deg, #FF4136, #cc2b20, #FF4136);
+            box-shadow: 0 0 20px rgba(255, 65, 54, 0.9), 
+                        inset 0 0 15px rgba(255, 255, 255, 0.4),
+                        0 5px 10px rgba(0, 0, 0, 0.5);
+            bottom: 180px;
+            left: 485px;
         }
         
         #bot::after {
             content: 'B';
+            font-size: 22px;
+            margin-top: -5px;
         }
         
         /* Barras de saúde */
         .health-bar {
             position: absolute;
-            width: 150px;
-            height: 20px;
-            background-color: rgba(51, 51, 51, 0.8);
+            width: 180px;
+            height: 25px;
+            background-color: rgba(30, 30, 40, 0.9);
             border: 2px solid #555;
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
             z-index: 20;
-            backdrop-filter: blur(2px);
+            backdrop-filter: blur(3px);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
         }
         
         .health-fill {
@@ -187,86 +198,94 @@
             background: linear-gradient(to right, #FF4136, #FF851B, #2ECC40);
             width: 100%;
             transition: width 0.3s;
+            border-radius: 10px;
         }
         
         #player-health {
-            top: 15px;
-            left: 15px;
+            top: 20px;
+            left: 20px;
         }
         
         #bot-health {
-            bottom: 15px;
-            right: 15px;
+            bottom: 20px;
+            right: 20px;
         }
         
         /* Display de distância */
         .distance-display {
             position: absolute;
-            font-size: 18px;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 8px 15px;
-            border-radius: 8px;
+            font-size: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 18px;
+            border-radius: 10px;
             z-index: 20;
-            backdrop-filter: blur(2px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(3px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
         }
         
         #player-distance {
             top: 15px;
-            right: 15px;
+            right: 20px;
         }
         
         #bot-distance {
-            bottom: 15px;
-            left: 15px;
+            bottom: 20px;
+            left: 20px;
         }
         
         /* Obstáculos */
         .obstacle {
             position: absolute;
             z-index: 5;
-            border-radius: 4px;
+            border-radius: 6px;
+            transition: transform 0.2s;
+        }
+        
+        .obstacle:hover {
+            transform: scale(1.05);
         }
         
         .triangle {
             width: 0;
             height: 0;
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-bottom: 30px solid #FF00FF;
-            filter: drop-shadow(0 0 5px rgba(255, 0, 255, 0.8));
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 35px solid #FF00FF;
+            filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.9));
         }
         
         .rectangle {
-            width: 40px;
-            height: 25px;
-            background: linear-gradient(135deg, #ff00ff, #cc00cc);
-            border-radius: 6px;
-            filter: drop-shadow(0 0 5px rgba(255, 0, 255, 0.8));
+            width: 50px;
+            height: 35px;
+            background: linear-gradient(135deg, #ff00ff, #cc00cc, #ff00ff);
+            border-radius: 8px;
+            filter: drop-shadow(0 0 8px rgba(255, 0, 255, 0.9));
             display: flex;
             justify-content: center;
             align-items: center;
             color: white;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
         }
         
         /* Controles */
         .controls {
             display: flex;
-            gap: 20px;
-            margin-top: 15px;
+            gap: 25px;
+            margin-top: 20px;
         }
         
         .control-btn {
-            padding: 12px 25px;
-            font-size: 18px;
+            padding: 15px 30px;
+            font-size: 20px;
             font-weight: bold;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 7px 20px rgba(0, 0, 0, 0.4);
         }
         
         #accelerate {
@@ -276,7 +295,13 @@
         
         #accelerate:hover {
             background: linear-gradient(to bottom, #27ae60, #219653);
-            transform: translateY(-3px);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        #accelerate:active {
+            transform: translateY(0);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
         }
         
         #decelerate {
@@ -286,18 +311,26 @@
         
         #decelerate:hover {
             background: linear-gradient(to bottom, #c0392b, #a33226);
-            transform: translateY(-3px);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+        
+        #decelerate:active {
+            transform: translateY(0);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
         }
         
         /* Display de velocidade */
         .speed-display {
-            margin-top: 15px;
-            font-size: 18px;
+            margin-top: 20px;
+            font-size: 20px;
             text-align: center;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 10px 20px;
-            border-radius: 8px;
-            backdrop-filter: blur(2px);
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px 25px;
+            border-radius: 10px;
+            backdrop-filter: blur(3px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
         }
         
         /* Tela de game over */
@@ -306,74 +339,112 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            padding: 30px 40px;
-            border-radius: 15px;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px 50px;
+            border-radius: 20px;
             text-align: center;
             z-index: 100;
             display: none;
-            box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
-            border: 2px solid #4fe0ff;
-            backdrop-filter: blur(5px);
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.25);
+            border: 3px solid #4fe0ff;
+            backdrop-filter: blur(8px);
+            width: 500px;
         }
         
         #game-over h2 {
-            font-size: 32px;
-            margin-bottom: 15px;
+            font-size: 36px;
+            margin-bottom: 20px;
             color: #4fe0ff;
+            text-shadow: 0 0 15px rgba(79, 224, 255, 0.8);
         }
         
         #restart {
-            margin-top: 20px;
-            padding: 10px 25px;
-            font-size: 18px;
+            margin-top: 25px;
+            padding: 12px 30px;
+            font-size: 20px;
             background: linear-gradient(to bottom, #0074D9, #005caf);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
         }
         
         #restart:hover {
             background: linear-gradient(to bottom, #005caf, #00478f);
-            transform: scale(1.05);
+            transform: scale(1.08);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
         }
         
         /* Instruções */
         .instructions {
-            margin-top: 20px;
+            margin-top: 25px;
             text-align: center;
-            max-width: 500px;
-            line-height: 1.5;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 15px;
-            border-radius: 10px;
-            backdrop-filter: blur(2px);
+            max-width: 600px;
+            line-height: 1.6;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(3px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         .key {
             display: inline-block;
-            padding: 2px 8px;
+            padding: 3px 10px;
             background: #333;
-            border-radius: 4px;
+            border-radius: 5px;
             border: 1px solid #555;
             font-family: monospace;
+            margin: 0 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
         }
         
         /* Efeito de movimento */
         @keyframes moveRoad {
             from { background-position: 0 0; }
-            to { background-position: 0 40px; }
+            to { background-position: 0 60px; }
         }
         
         .moving {
             animation: moveRoad 0.5s linear infinite;
         }
+        
+        /* Efeitos de partícula */
+        .particle {
+            position: absolute;
+            background: rgba(79, 224, 255, 0.7);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        /* Cooldown indicator */
+        #bot-cooldown {
+            position: absolute;
+            bottom: 60px;
+            right: 20px;
+            width: 180px;
+            height: 10px;
+            background: rgba(30, 30, 40, 0.7);
+            border-radius: 5px;
+            overflow: hidden;
+            display: none;
+            z-index: 20;
+        }
+        
+        #bot-cooldown-fill {
+            height: 100%;
+            background: linear-gradient(to right, #FF4136, #FF851B);
+            width: 0%;
+            transition: width 0.1s;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
-    <h1>Maratona de Obstáculos</h1>
+    <h1>Racing Stars</h1>
     
     <div id="game-container">
         <div id="track">
@@ -381,16 +452,16 @@
             
             <!-- Área do jogador com linhas azuis -->
             <div id="player-area" class="player-area">
-                <div class="player-lane" style="top: 33%"></div>
+                <div class="player-lane" style="top: 30%"></div>
                 <div class="player-lane" style="top: 50%"></div>
-                <div class="player-lane" style="top: 66%"></div>
+                <div class="player-lane" style="top: 70%"></div>
             </div>
             
             <!-- Área do bot com linhas vermelhas -->
             <div id="bot-area" class="player-area">
-                <div class="bot-lane" style="top: 33%"></div>
+                <div class="bot-lane" style="top: 30%"></div>
                 <div class="bot-lane" style="top: 50%"></div>
-                <div class="bot-lane" style="top: 66%"></div>
+                <div class="bot-lane" style="top: 70%"></div>
             </div>
             
             <!-- Corredores -->
@@ -409,6 +480,11 @@
             <!-- Distâncias -->
             <div id="player-distance" class="distance-display">Jogador: 0m</div>
             <div id="bot-distance" class="distance-display">Bot: 0m</div>
+            
+            <!-- Indicador de cooldown do bot -->
+            <div id="bot-cooldown">
+                <div id="bot-cooldown-fill"></div>
+            </div>
             
             <!-- Tela de game over -->
             <div id="game-over">
@@ -433,9 +509,9 @@
     
     <!-- Instruções -->
     <div class="instructions">
-        <p>Use as teclas <span class="key">W</span> e <span class="key">S</span> para mudar de pista (apenas nas linhas azuis)</p>
-        <p>Use os botões para controlar sua velocidade. Cuidado com os obstáculos rosas!</p>
-        <p>O bot ganha velocidade automaticamente ao longo do tempo!</p>
+        <p>Use as teclas <span class="key">W</span> e <span class="key">S</span> para mudar de pista</p>
+        <p>Use os botões para controlar sua velocidade. Cuidado com os obstáculos!</p>
+        
     </div>
 
     <script>
@@ -460,7 +536,9 @@
             botSpeedIncrease: 0.03, // Aumento de velocidade do bot por segundo
             obstacleFrequency: 2000, // Quanto maior, menos obstáculos
             minObstacleFrequency: 500, // Frequência mínima de obstáculos
-            lastBotSpeedIncrease: 0 // Timestamp do último aumento de velocidade do bot
+            lastBotSpeedIncrease: 0, // Timestamp do último aumento de velocidade do bot
+            botMoveCooldown: 1000, // Cooldown de 1.5 segundos para movimentos do bot
+            lastBotMove: 0 // Timestamp do último movimento do bot
         };
         
         // Elementos do DOM
@@ -479,10 +557,12 @@
         const restartBtn = document.getElementById('restart');
         const playerDistanceDisplay = document.getElementById('player-distance');
         const botDistanceDisplay = document.getElementById('bot-distance');
+        const botCooldownDisplay = document.getElementById('bot-cooldown');
+        const botCooldownFill = document.getElementById('bot-cooldown-fill');
         
         // Posições Y das pistas (para área do jogador e do bot)
-       const playerLanePositions = [85, 135, 185]; // Top, middle, bottom (parte de cima)
-const botLanePositions = [390, 450, 510];   // Top, middle, bottom (parte de baixo)
+        const playerLanePositions = [50, 90, 137]; // Top, middle, bottom (parte de cima)
+        const botLanePositions = [275, 315, 350];   // Top, middle, bottom (parte de baixo)
         
         // Inicializar o jogo
         function initGame() {
@@ -498,24 +578,73 @@ const botLanePositions = [390, 450, 510];   // Top, middle, bottom (parte de bai
             gameConfig.botDistance = 0;
             gameConfig.obstacleFrequency = 2000;
             gameConfig.lastBotSpeedIncrease = Date.now();
+            gameConfig.lastBotMove = Date.now();
             
             updateHealthBars();
             updateSpeedDisplays();
             updateDistanceDisplays();
             
             // Reposicionar jogadores
-            player.style.bottom = '20px';
-            player.style.left = '385px';
-            bot.style.top = '20px';
-            bot.style.left = '385px';
+            player.style.top = `${playerLanePositions[1]}px`;
+            player.style.left = '485px';
+            bot.style.top = `${botLanePositions[1]}px`;
+            bot.style.left = '485px';
             
             // Remover obstáculos antigos
             document.querySelectorAll('.obstacle').forEach(obs => obs.remove());
+            
+            // Esconder cooldown do bot
+            botCooldownDisplay.style.display = 'none';
             
             // Iniciar animação da pista
             track.classList.add('moving');
             
             gameOverDisplay.style.display = 'none';
+            
+            // Criar partículas iniciais
+            createParticles();
+        }
+        
+        // Criar partículas de efeito
+        function createParticles() {
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                const size = Math.random() * 5 + 2;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                
+                particle.style.left = `${Math.random() * 1000}px`;
+                particle.style.top = `${Math.random() * 650}px`;
+                
+                particle.style.opacity = Math.random() * 0.5 + 0.3;
+                
+                gameContainer.appendChild(particle);
+                
+                // Animar partícula
+                animateParticle(particle);
+            }
+        }
+        
+        // Animar partícula
+        function animateParticle(particle) {
+            const duration = Math.random() * 5 + 5;
+            
+            particle.animate(
+                [
+                    { transform: 'translateY(0px)', opacity: particle.style.opacity },
+                    { transform: `translateY(${Math.random() * 50 + 30}px)`, opacity: 0 }
+                ],
+                {
+                    duration: duration * 1000,
+                    easing: 'ease-out'
+                }
+            ).onfinish = () => {
+                particle.style.left = `${Math.random() * 1000}px`;
+                particle.style.top = `${Math.random() * 100}px`;
+                animateParticle(particle);
+            };
         }
         
         // Atualizar a dificuldade com base na distância
@@ -539,6 +668,20 @@ const botLanePositions = [390, 450, 510];   // Top, middle, bottom (parte de bai
                 gameConfig.botSpeed = Math.min(gameConfig.botSpeed + gameConfig.botSpeedIncrease, gameConfig.maxSpeed);
                 gameConfig.lastBotSpeedIncrease = now;
                 updateSpeedDisplays();
+            }
+        }
+        
+        // Atualizar cooldown do bot
+        function updateBotCooldown() {
+            const now = Date.now();
+            const timeSinceLastMove = now - gameConfig.lastBotMove;
+            const cooldownPercent = (timeSinceLastMove / gameConfig.botMoveCooldown) * 100;
+            
+            if (cooldownPercent < 100) {
+                botCooldownDisplay.style.display = 'block';
+                botCooldownFill.style.width = `${cooldownPercent}%`;
+            } else {
+                botCooldownDisplay.style.display = 'none';
             }
         }
         
@@ -566,18 +709,18 @@ const botLanePositions = [390, 450, 510];   // Top, middle, bottom (parte de bai
             
             // Posicionar obstáculo
             if (area === 'player') {
-                obstacle.style.top = `${playerLanePositions[lane] - (isTriangle ? 15 : 12)}px`;
+                obstacle.style.top = `${playerLanePositions[lane] - (isTriangle ? 5 : 5)}px`;
             } else {
-                obstacle.style.top = `${botLanePositions[lane] - (isTriangle ? 15 : 12)}px`;
+                obstacle.style.top = `${botLanePositions[lane] - (isTriangle ? 1 : 1)}px`;
             }
             
-            obstacle.style.left = '800px';
+            obstacle.style.left = '1000px';
             obstacle.dataset.area = area;
             obstacle.dataset.lane = lane;
             
             if (!isTriangle) {
                 const damageText = document.createElement('span');
-                damageText.textContent = '-10';
+                damageText.textContent = '';
                 obstacle.appendChild(damageText);
             }
             
@@ -589,10 +732,10 @@ const botLanePositions = [390, 450, 510];   // Top, middle, bottom (parte de bai
                 lane: lane,
                 area: area,
                 type: isTriangle ? 'triangle' : 'rectangle',
-                x: 800,
+                x: 1000,
                 y: area === 'player' ? playerLanePositions[lane] : botLanePositions[lane],
-                width: isTriangle ? 30 : 40,
-                height: isTriangle ? 30 : 25
+                width: isTriangle ? 40 : 50,
+                height: isTriangle ? 35 : 35
             });
         }
         
@@ -621,26 +764,26 @@ const botLanePositions = [390, 450, 510];   // Top, middle, bottom (parte de bai
                 obstacle.element.style.left = `${obstacle.x}px`;
                 
                 // Verificar colisão apenas se o obstáculo estiver perto do corredor
-                if (obstacle.x < 450 && obstacle.x > 300) {
+                if (obstacle.x < 550 && obstacle.x > 350) {
                     // Definir as áreas dos corredores
                     const playerRect = {
-                        x: 385,
-                        y: playerLanePositions[gameConfig.playerLane] - 15,
-                        width: 30,
-                        height: 30
+                        x: 485,
+                        y: playerLanePositions[gameConfig.playerLane] - 30,
+                        width: 40,
+                        height: 60
                     };
                     
                     const botRect = {
-                        x: 385,
-                        y: botLanePositions[gameConfig.botLane] - 15,
-                        width: 30,
-                        height: 30
+                        x: 485,
+                        y: botLanePositions[gameConfig.botLane] - 30,
+                        width: 40,
+                        height: 60
                     };
                     
                     // Definir a área do obstáculo
                     const obstacleRect = {
                         x: obstacle.x,
-                        y: obstacle.y - (obstacle.type === 'triangle' ? 15 : 12),
+                        y: obstacle.y - (obstacle.type === 'triangle' ? 18 : 18),
                         width: obstacle.width,
                         height: obstacle.height
                     };
@@ -714,41 +857,48 @@ const botLanePositions = [390, 450, 510];   // Top, middle, bottom (parte de bai
             botDistanceDisplay.textContent = `Bot: ${Math.floor(gameConfig.botDistance)}m`;
         }
         
-        // IA do bot - movimentação simples entre pistas
+        // IA do bot - movimentação simples entre pistas com cooldown
         function updateBot() {
             if (!gameConfig.gameRunning) return;
             
             // Aumentar velocidade do bot com o tempo
             increaseBotSpeed();
             
+            // Atualizar cooldown do bot
+            updateBotCooldown();
+            
             // Atualizar distância do bot
             gameConfig.botDistance += gameConfig.botSpeed * 0.1;
             updateDistanceDisplays();
             
+            // Verificar se pode mover (cooldown)
+            const now = Date.now();
+            const canMove = now - gameConfig.lastBotMove >= gameConfig.botMoveCooldown;
+            
             // Verificar se há obstáculos próximos na pista do bot
             const imminentObstacle = gameConfig.obstacles.find(obs => 
-                obs.area === 'bot' && obs.lane === gameConfig.botLane && obs.x < 500 && obs.x > 350
+                obs.area === 'bot' && obs.lane === gameConfig.botLane && obs.x < 600 && obs.x > 400
             );
             
-            if (imminentObstacle) {
+            if (imminentObstacle && canMove) {
                 // Tentar desviar
                 const possibleLanes = [0, 1, 2].filter(lane => lane !== gameConfig.botLane);
                 const safeLane = possibleLanes.find(lane => 
                     !gameConfig.obstacles.some(obs => 
-                        obs.area === 'bot' && obs.lane === lane && obs.x < 500 && obs.x > 350
+                        obs.area === 'bot' && obs.lane === lane && obs.x < 600 && obs.x > 400
                     )
                 );
                 
                 if (safeLane !== undefined) {
                     gameConfig.botLane = safeLane;
-                    bot.style.top = `${botLanePositions[safeLane] - 15}px`;
+                    bot.style.top = `${botLanePositions[safeLane]}px`;
+                    gameConfig.lastBotMove = now;
                 }
-            } else {
+            } else if (!imminentObstacle && gameConfig.botLane !== 1 && canMove) {
                 // Se não houver obstáculos, voltar para a pista do meio
-                if (gameConfig.botLane !== 1) {
-                    gameConfig.botLane = 1;
-                    bot.style.top = `${botLanePositions[1] - 15}px`;
-                }
+                gameConfig.botLane = 1;
+                bot.style.top = `${botLanePositions[1]}px`;
+                gameConfig.lastBotMove = now;
             }
         }
         
@@ -814,8 +964,6 @@ const botLanePositions = [390, 450, 510];   // Top, middle, bottom (parte de bai
         
         // Inicializar o jogo
         initGame();
-      player.style.top = `${playerLanePositions[1]}px`; // Posição inicial do jogador
-bot.style.bottom = `${botLanePositions[1]}px`; 
         gameLoop();
     </script>
 </body>
