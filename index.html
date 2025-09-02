@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrida de Obstáculos - Pistas Coloridas</title>
+    <title>Maratona de Obstáculos</title>
     <style>
         * {
             margin: 0;
@@ -37,7 +37,6 @@
             position: relative;
             width: 800px;
             height: 600px;
-            background-color: #111;
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 0 25px rgba(0, 0, 0, 0.8);
@@ -48,8 +47,26 @@
             position: absolute;
             width: 100%;
             height: 100%;
+            background: linear-gradient(to bottom, #2d2d2d, #1a1a1a);
+            overflow: hidden;
         }
         
+        /* Efeito de pista */
+        #track::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                to bottom,
+                transparent,
+                transparent 20px,
+                rgba(255, 255, 255, 0.03) 20px,
+                rgba(255, 255, 255, 0.03) 40px
+            );
+        }
+        
+        /* Divisão central */
         #divider {
             position: absolute;
             top: 0;
@@ -64,6 +81,7 @@
                 #A0522D 30px
             );
             z-index: 2;
+            box-shadow: 0 0 10px rgba(139, 69, 19, 0.7);
         }
         
         .player-area {
@@ -83,64 +101,85 @@
             border-top: 2px solid #8B4513;
         }
         
-        .lane {
+        /* Linhas da pista - azuis para jogador */
+        .player-lane {
             position: absolute;
             width: 100%;
-            height: 1px;
-        }
-        
-        .player-lane {
+            height: 2px;
             background: repeating-linear-gradient(
                 90deg,
                 transparent,
-                transparent 9px,
-                rgba(0, 116, 217, 0.7) 9px,
-                rgba(0, 116, 217, 0.7) 12px
+                transparent 15px,
+                #0074D9 15px,
+                #0074D9 20px
             );
+            box-shadow: 0 0 8px rgba(0, 116, 217, 0.6);
         }
         
+        /* Linhas da pista - vermelhas para bot */
         .bot-lane {
+            position: absolute;
+            width: 100%;
+            height: 2px;
             background: repeating-linear-gradient(
                 90deg,
                 transparent,
-                transparent 9px,
-                rgba(255, 65, 54, 0.7) 9px,
-                rgba(255, 65, 54, 0.7) 12px
+                transparent 15px,
+                #FF4136 15px,
+                #FF4136 20px
             );
+            box-shadow: 0 0 8px rgba(255, 65, 54, 0.6);
         }
         
-        .player {
+        /* Corredores */
+        .runner {
             position: absolute;
             width: 30px;
             height: 30px;
-            border-radius: 4px;
+            border-radius: 6px;
             z-index: 10;
-            transition: transform 0.2s;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
         }
         
         #player {
-            background: linear-gradient(135deg, #0074D9, #00478f);
-            box-shadow: 0 0 15px rgba(0, 116, 217, 0.8);
-            bottom: 20px;
+            background: linear-gradient(135deg, #0074D9, #005caf);
+            box-shadow: 0 0 15px rgba(0, 116, 217, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.3);
+            top: 135px;
             left: 385px;
+        }
+        
+        #player::after {
+            content: 'J';
         }
         
         #bot {
-            background: linear-gradient(135deg, #FF4136, #b32c23);
-            box-shadow: 0 0 15px rgba(255, 65, 54, 0.8);
-            top: 20px;
+            background: linear-gradient(135deg, #FF4136, #cc2b20);
+            box-shadow: 0 0 15px rgba(255, 65, 54, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.3);
+            bottom: 135px;
             left: 385px;
         }
         
+        #bot::after {
+            content: 'B';
+        }
+        
+        /* Barras de saúde */
         .health-bar {
             position: absolute;
             width: 150px;
             height: 20px;
-            background-color: #333;
+            background-color: rgba(51, 51, 51, 0.8);
             border: 2px solid #555;
             border-radius: 10px;
             overflow: hidden;
             z-index: 20;
+            backdrop-filter: blur(2px);
         }
         
         .health-fill {
@@ -160,13 +199,16 @@
             right: 15px;
         }
         
+        /* Display de distância */
         .distance-display {
             position: absolute;
             font-size: 18px;
             background: rgba(0, 0, 0, 0.5);
-            padding: 5px 10px;
-            border-radius: 5px;
+            padding: 8px 15px;
+            border-radius: 8px;
             z-index: 20;
+            backdrop-filter: blur(2px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         #player-distance {
@@ -179,9 +221,11 @@
             left: 15px;
         }
         
+        /* Obstáculos */
         .obstacle {
             position: absolute;
             z-index: 5;
+            border-radius: 4px;
         }
         
         .triangle {
@@ -196,11 +240,18 @@
         .rectangle {
             width: 40px;
             height: 25px;
-            background-color: #FF00FF;
-            border-radius: 4px;
+            background: linear-gradient(135deg, #ff00ff, #cc00cc);
+            border-radius: 6px;
             filter: drop-shadow(0 0 5px rgba(255, 0, 255, 0.8));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
         }
         
+        /* Controles */
         .controls {
             display: flex;
             gap: 20px;
@@ -238,6 +289,7 @@
             transform: translateY(-3px);
         }
         
+        /* Display de velocidade */
         .speed-display {
             margin-top: 15px;
             font-size: 18px;
@@ -245,8 +297,10 @@
             background: rgba(0, 0, 0, 0.3);
             padding: 10px 20px;
             border-radius: 8px;
+            backdrop-filter: blur(2px);
         }
         
+        /* Tela de game over */
         #game-over {
             position: absolute;
             top: 50%;
@@ -260,6 +314,7 @@
             display: none;
             box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
             border: 2px solid #4fe0ff;
+            backdrop-filter: blur(5px);
         }
         
         #game-over h2 {
@@ -285,6 +340,7 @@
             transform: scale(1.05);
         }
         
+        /* Instruções */
         .instructions {
             margin-top: 20px;
             text-align: center;
@@ -293,6 +349,7 @@
             background: rgba(0, 0, 0, 0.3);
             padding: 15px;
             border-radius: 10px;
+            backdrop-filter: blur(2px);
         }
         
         .key {
@@ -304,53 +361,43 @@
             font-family: monospace;
         }
         
-        .cooldown-indicator {
-            position: absolute;
-            width: 30px;
-            height: 5px;
-            background: #333;
-            border-radius: 3px;
-            overflow: hidden;
-            z-index: 15;
+        /* Efeito de movimento */
+        @keyframes moveRoad {
+            from { background-position: 0 0; }
+            to { background-position: 0 40px; }
         }
         
-        .cooldown-fill {
-            height: 100%;
-            background: #2ECC40;
-            width: 0%;
-            transition: width 0.1s linear;
-        }
-        
-        #bot-cooldown {
-            bottom: 60px;
-            left: 385px;
+        .moving {
+            animation: moveRoad 0.5s linear infinite;
         }
     </style>
 </head>
 <body>
-    <h1>Corrida de Obstáculos - Pistas Coloridas</h1>
+    <h1>Maratona de Obstáculos</h1>
     
     <div id="game-container">
         <div id="track">
             <div id="divider"></div>
             
+            <!-- Área do jogador com linhas azuis -->
             <div id="player-area" class="player-area">
-                <!-- Linhas azuis para o jogador -->
-                <div class="lane player-lane" style="top: 33%"></div>
-                <div class="lane player-lane" style="top: 50%"></div>
-                <div class="lane player-lane" style="top: 66%"></div>
+                <div class="player-lane" style="top: 33%"></div>
+                <div class="player-lane" style="top: 50%"></div>
+                <div class="player-lane" style="top: 66%"></div>
             </div>
             
+            <!-- Área do bot com linhas vermelhas -->
             <div id="bot-area" class="player-area">
-                <!-- Linhas vermelhas para o bot -->
-                <div class="lane bot-lane" style="top: 33%"></div>
-                <div class="lane bot-lane" style="top: 50%"></div>
-                <div class="lane bot-lane" style="top: 66%"></div>
+                <div class="bot-lane" style="top: 33%"></div>
+                <div class="bot-lane" style="top: 50%"></div>
+                <div class="bot-lane" style="top: 66%"></div>
             </div>
             
-            <div id="player" class="player"></div>
-            <div id="bot" class="player"></div>
+            <!-- Corredores -->
+            <div id="player" class="runner"></div>
+            <div id="bot" class="runner"></div>
             
+            <!-- Barras de saúde -->
             <div id="player-health" class="health-bar">
                 <div id="player-health-fill" class="health-fill"></div>
             </div>
@@ -359,13 +406,11 @@
                 <div id="bot-health-fill" class="health-fill"></div>
             </div>
             
+            <!-- Distâncias -->
             <div id="player-distance" class="distance-display">Jogador: 0m</div>
             <div id="bot-distance" class="distance-display">Bot: 0m</div>
             
-            <div id="bot-cooldown" class="cooldown-indicator">
-                <div id="bot-cooldown-fill" class="cooldown-fill"></div>
-            </div>
-            
+            <!-- Tela de game over -->
             <div id="game-over">
                 <h2>Fim de Jogo</h2>
                 <p id="game-result"></p>
@@ -374,20 +419,23 @@
         </div>
     </div>
     
+    <!-- Controles -->
     <div class="controls">
         <button id="accelerate" class="control-btn">Acelerar</button>
         <button id="decelerate" class="control-btn">Desacelerar</button>
     </div>
     
+    <!-- Display de velocidade -->
     <div class="speed-display">
         <div>Sua velocidade: <span id="player-speed">1.00</span>x</div>
         <div>Velocidade do bot: <span id="bot-speed">1.00</span>x</div>
     </div>
     
+    <!-- Instruções -->
     <div class="instructions">
         <p>Use as teclas <span class="key">W</span> e <span class="key">S</span> para mudar de pista (apenas nas linhas azuis)</p>
         <p>Use os botões para controlar sua velocidade. Cuidado com os obstáculos rosas!</p>
-        <p>O bot só pode mudar de pista a cada 1.5 segundos (apenas nas linhas vermelhas)</p>
+        <p>O bot ganha velocidade automaticamente ao longo do tempo!</p>
     </div>
 
     <script>
@@ -409,14 +457,15 @@
             decelerationRate: 0.04,
             maxSpeed: 3.0,
             minSpeed: 0.5,
-            botCooldown: 0,
-            botCooldownMax: 90, // 1.5 segundos em frames (60fps = 90 frames)
+            botSpeedIncrease: 0.03, // Aumento de velocidade do bot por segundo
             obstacleFrequency: 2000, // Quanto maior, menos obstáculos
-            minObstacleFrequency: 500 // Frequência mínima de obstáculos
+            minObstacleFrequency: 500, // Frequência mínima de obstáculos
+            lastBotSpeedIncrease: 0 // Timestamp do último aumento de velocidade do bot
         };
         
         // Elementos do DOM
         const gameContainer = document.getElementById('game-container');
+        const track = document.getElementById('track');
         const player = document.getElementById('player');
         const bot = document.getElementById('bot');
         const playerHealthFill = document.getElementById('player-health-fill');
@@ -430,11 +479,10 @@
         const restartBtn = document.getElementById('restart');
         const playerDistanceDisplay = document.getElementById('player-distance');
         const botDistanceDisplay = document.getElementById('bot-distance');
-        const botCooldownFill = document.getElementById('bot-cooldown-fill');
         
         // Posições Y das pistas (para área do jogador e do bot)
-        const playerLanePositions = [90, 150, 210]; // Top, middle, bottom
-        const botLanePositions = [390, 450, 510];   // Top, middle, bottom
+       const playerLanePositions = [85, 135, 185]; // Top, middle, bottom (parte de cima)
+const botLanePositions = [390, 450, 510];   // Top, middle, bottom (parte de baixo)
         
         // Inicializar o jogo
         function initGame() {
@@ -449,12 +497,11 @@
             gameConfig.playerDistance = 0;
             gameConfig.botDistance = 0;
             gameConfig.obstacleFrequency = 2000;
-            gameConfig.botCooldown = 0;
+            gameConfig.lastBotSpeedIncrease = Date.now();
             
             updateHealthBars();
             updateSpeedDisplays();
             updateDistanceDisplays();
-            updateBotCooldown();
             
             // Reposicionar jogadores
             player.style.bottom = '20px';
@@ -464,6 +511,9 @@
             
             // Remover obstáculos antigos
             document.querySelectorAll('.obstacle').forEach(obs => obs.remove());
+            
+            // Iniciar animação da pista
+            track.classList.add('moving');
             
             gameOverDisplay.style.display = 'none';
         }
@@ -480,6 +530,16 @@
                 gameConfig.minObstacleFrequency, 
                 2000 - difficultyLevel * 150
             );
+        }
+        
+        // Aumentar velocidade do bot com o tempo
+        function increaseBotSpeed() {
+            const now = Date.now();
+            if (now - gameConfig.lastBotSpeedIncrease >= 1000) { // A cada segundo
+                gameConfig.botSpeed = Math.min(gameConfig.botSpeed + gameConfig.botSpeedIncrease, gameConfig.maxSpeed);
+                gameConfig.lastBotSpeedIncrease = now;
+                updateSpeedDisplays();
+            }
         }
         
         // Gerar obstáculos
@@ -515,6 +575,12 @@
             obstacle.dataset.area = area;
             obstacle.dataset.lane = lane;
             
+            if (!isTriangle) {
+                const damageText = document.createElement('span');
+                damageText.textContent = '-10';
+                obstacle.appendChild(damageText);
+            }
+            
             gameContainer.appendChild(obstacle);
             
             // Adicionar aos obstáculos ativos
@@ -523,8 +589,19 @@
                 lane: lane,
                 area: area,
                 type: isTriangle ? 'triangle' : 'rectangle',
-                x: 800
+                x: 800,
+                y: area === 'player' ? playerLanePositions[lane] : botLanePositions[lane],
+                width: isTriangle ? 30 : 40,
+                height: isTriangle ? 30 : 25
             });
+        }
+        
+        // Verificar colisão entre dois objetos
+        function checkCollision(obj1, obj2) {
+            return obj1.x < obj2.x + obj2.width &&
+                   obj1.x + obj1.width > obj2.x &&
+                   obj1.y < obj2.y + obj2.height &&
+                   obj1.y + obj1.height > obj2.y;
         }
         
         // Atualizar obstáculos
@@ -543,20 +620,48 @@
                 
                 obstacle.element.style.left = `${obstacle.x}px`;
                 
-                // Verificar colisão
-                if (obstacle.x < 420 && obstacle.x > 380) {
+                // Verificar colisão apenas se o obstáculo estiver perto do corredor
+                if (obstacle.x < 450 && obstacle.x > 300) {
+                    // Definir as áreas dos corredores
+                    const playerRect = {
+                        x: 385,
+                        y: playerLanePositions[gameConfig.playerLane] - 15,
+                        width: 30,
+                        height: 30
+                    };
+                    
+                    const botRect = {
+                        x: 385,
+                        y: botLanePositions[gameConfig.botLane] - 15,
+                        width: 30,
+                        height: 30
+                    };
+                    
+                    // Definir a área do obstáculo
+                    const obstacleRect = {
+                        x: obstacle.x,
+                        y: obstacle.y - (obstacle.type === 'triangle' ? 15 : 12),
+                        width: obstacle.width,
+                        height: obstacle.height
+                    };
+                    
+                    // Verificar colisão apenas se estiver na mesma pista
                     if (obstacle.area === 'player' && obstacle.lane === gameConfig.playerLane) {
-                        takeDamage('player');
-                        // Efeito visual de colisão
-                        player.style.transform = 'scale(1.3)';
-                        setTimeout(() => { player.style.transform = 'scale(1)'; }, 300);
+                        if (checkCollision(playerRect, obstacleRect)) {
+                            takeDamage('player');
+                            // Efeito visual de colisão
+                            player.style.transform = 'scale(1.3)';
+                            setTimeout(() => { player.style.transform = 'scale(1)'; }, 300);
+                        }
                     }
                     
                     if (obstacle.area === 'bot' && obstacle.lane === gameConfig.botLane) {
-                        takeDamage('bot');
-                        // Efeito visual de colisão
-                        bot.style.transform = 'scale(1.3)';
-                        setTimeout(() => { bot.style.transform = 'scale(1)'; }, 300);
+                        if (checkCollision(botRect, obstacleRect)) {
+                            takeDamage('bot');
+                            // Efeito visual de colisão
+                            bot.style.transform = 'scale(1.3)';
+                            setTimeout(() => { bot.style.transform = 'scale(1)'; }, 300);
+                        }
                     }
                 }
                 
@@ -609,67 +714,48 @@
             botDistanceDisplay.textContent = `Bot: ${Math.floor(gameConfig.botDistance)}m`;
         }
         
-        // Atualizar cooldown do bot
-        function updateBotCooldown() {
-            const cooldownPercent = (gameConfig.botCooldown / gameConfig.botCooldownMax) * 100;
-            botCooldownFill.style.width = `${cooldownPercent}%`;
-        }
-        
-        // IA do bot
+        // IA do bot - movimentação simples entre pistas
         function updateBot() {
             if (!gameConfig.gameRunning) return;
+            
+            // Aumentar velocidade do bot com o tempo
+            increaseBotSpeed();
             
             // Atualizar distância do bot
             gameConfig.botDistance += gameConfig.botSpeed * 0.1;
             updateDistanceDisplays();
             
-            // Aumentar velocidade do bot gradualmente
-            if (gameConfig.botSpeed < gameConfig.maxSpeed) {
-                gameConfig.botSpeed += 0.002;
-            }
-            
-            // Atualizar cooldown
-            if (gameConfig.botCooldown > 0) {
-                gameConfig.botCooldown--;
-                updateBotCooldown();
-            }
-            
             // Verificar se há obstáculos próximos na pista do bot
             const imminentObstacle = gameConfig.obstacles.find(obs => 
-                obs.area === 'bot' && obs.lane === gameConfig.botLane && obs.x < 600 && obs.x > 400
+                obs.area === 'bot' && obs.lane === gameConfig.botLane && obs.x < 500 && obs.x > 350
             );
             
-            if (imminentObstacle && gameConfig.botCooldown === 0) {
+            if (imminentObstacle) {
                 // Tentar desviar
                 const possibleLanes = [0, 1, 2].filter(lane => lane !== gameConfig.botLane);
                 const safeLane = possibleLanes.find(lane => 
                     !gameConfig.obstacles.some(obs => 
-                        obs.area === 'bot' && obs.lane === lane && obs.x < 600 && obs.x > 400
+                        obs.area === 'bot' && obs.lane === lane && obs.x < 500 && obs.x > 350
                     )
                 );
                 
                 if (safeLane !== undefined) {
                     gameConfig.botLane = safeLane;
                     bot.style.top = `${botLanePositions[safeLane] - 15}px`;
-                    gameConfig.botCooldown = gameConfig.botCooldownMax;
-                    updateBotCooldown();
                 }
             } else {
                 // Se não houver obstáculos, voltar para a pista do meio
-                if (gameConfig.botLane !== 1 && gameConfig.botCooldown === 0) {
+                if (gameConfig.botLane !== 1) {
                     gameConfig.botLane = 1;
                     bot.style.top = `${botLanePositions[1] - 15}px`;
-                    gameConfig.botCooldown = gameConfig.botCooldownMax;
-                    updateBotCooldown();
                 }
             }
-            
-            updateSpeedDisplays();
         }
         
         // Finalizar jogo
         function endGame(message) {
             gameConfig.gameRunning = false;
+            track.classList.remove('moving');
             gameResult.textContent = `${message} Distância percorrida: ${Math.floor(gameConfig.playerDistance)}m`;
             gameOverDisplay.style.display = 'block';
         }
@@ -696,16 +782,14 @@
             if (!gameConfig.gameRunning) return;
             
             if (e.key === 'w' || e.key === 'W') {
-                // Mover para cima (apenas se não estiver na pista mais alta)
                 if (gameConfig.playerLane > 0) {
                     gameConfig.playerLane--;
-                    player.style.bottom = `${20 + gameConfig.playerLane * 60}px`;
+                    player.style.top = `${playerLanePositions[gameConfig.playerLane]}px`;
                 }
             } else if (e.key === 's' || e.key === 'S') {
-                // Mover para baixo (apenas se não estiver na pista mais baixa)
-                if (gameConfig.playerLane < 2) {
-                    gameConfig.playerLane++;
-                    player.style.bottom = `${20 + gameConfig.playerLane * 60}px`;
+                  if (gameConfig.playerLane < 2) {
+                      gameConfig.playerLane++;
+                      player.style.top = `${playerLanePositions[gameConfig.playerLane]}px`;
                 }
             }
         });
@@ -730,6 +814,8 @@
         
         // Inicializar o jogo
         initGame();
+      player.style.top = `${playerLanePositions[1]}px`; // Posição inicial do jogador
+bot.style.bottom = `${botLanePositions[1]}px`; 
         gameLoop();
     </script>
 </body>
