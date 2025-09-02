@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Corrida de Obstáculos</title>
+    <title>Corrida de Obstáculos - Pistas Coloridas</title>
     <style>
         * {
             margin: 0;
@@ -35,7 +35,7 @@
         
         #game-container {
             position: relative;
-            width: 500px;
+            width: 800px;
             height: 600px;
             background-color: #111;
             border-radius: 10px;
@@ -87,12 +87,25 @@
             position: absolute;
             width: 100%;
             height: 1px;
+        }
+        
+        .player-lane {
             background: repeating-linear-gradient(
                 90deg,
                 transparent,
                 transparent 9px,
-                rgba(255, 255, 255, 0.5) 9px,
-                rgba(255, 255, 255, 0.5) 12px
+                rgba(0, 116, 217, 0.7) 9px,
+                rgba(0, 116, 217, 0.7) 12px
+            );
+        }
+        
+        .bot-lane {
+            background: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 9px,
+                rgba(255, 65, 54, 0.7) 9px,
+                rgba(255, 65, 54, 0.7) 12px
             );
         }
         
@@ -109,14 +122,14 @@
             background: linear-gradient(135deg, #0074D9, #00478f);
             box-shadow: 0 0 15px rgba(0, 116, 217, 0.8);
             bottom: 20px;
-            left: 235px;
+            left: 385px;
         }
         
         #bot {
             background: linear-gradient(135deg, #FF4136, #b32c23);
             box-shadow: 0 0 15px rgba(255, 65, 54, 0.8);
             top: 20px;
-            left: 235px;
+            left: 385px;
         }
         
         .health-bar {
@@ -145,6 +158,25 @@
         #bot-health {
             bottom: 15px;
             right: 15px;
+        }
+        
+        .distance-display {
+            position: absolute;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            z-index: 20;
+        }
+        
+        #player-distance {
+            top: 15px;
+            right: 15px;
+        }
+        
+        #bot-distance {
+            bottom: 15px;
+            left: 15px;
         }
         
         .obstacle {
@@ -271,25 +303,49 @@
             border: 1px solid #555;
             font-family: monospace;
         }
+        
+        .cooldown-indicator {
+            position: absolute;
+            width: 30px;
+            height: 5px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+            z-index: 15;
+        }
+        
+        .cooldown-fill {
+            height: 100%;
+            background: #2ECC40;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        
+        #bot-cooldown {
+            bottom: 60px;
+            left: 385px;
+        }
     </style>
 </head>
 <body>
-    <h1>Corrida de Obstáculos</h1>
+    <h1>Corrida de Obstáculos - Pistas Coloridas</h1>
     
     <div id="game-container">
         <div id="track">
             <div id="divider"></div>
             
             <div id="player-area" class="player-area">
-                <div class="lane" style="top: 33%"></div>
-                <div class="lane" style="top: 50%"></div>
-                <div class="lane" style="top: 66%"></div>
+                <!-- Linhas azuis para o jogador -->
+                <div class="lane player-lane" style="top: 33%"></div>
+                <div class="lane player-lane" style="top: 50%"></div>
+                <div class="lane player-lane" style="top: 66%"></div>
             </div>
             
             <div id="bot-area" class="player-area">
-                <div class="lane" style="top: 33%"></div>
-                <div class="lane" style="top: 50%"></div>
-                <div class="lane" style="top: 66%"></div>
+                <!-- Linhas vermelhas para o bot -->
+                <div class="lane bot-lane" style="top: 33%"></div>
+                <div class="lane bot-lane" style="top: 50%"></div>
+                <div class="lane bot-lane" style="top: 66%"></div>
             </div>
             
             <div id="player" class="player"></div>
@@ -301,6 +357,13 @@
             
             <div id="bot-health" class="health-bar">
                 <div id="bot-health-fill" class="health-fill"></div>
+            </div>
+            
+            <div id="player-distance" class="distance-display">Jogador: 0m</div>
+            <div id="bot-distance" class="distance-display">Bot: 0m</div>
+            
+            <div id="bot-cooldown" class="cooldown-indicator">
+                <div id="bot-cooldown-fill" class="cooldown-fill"></div>
             </div>
             
             <div id="game-over">
@@ -322,8 +385,9 @@
     </div>
     
     <div class="instructions">
-        <p>Use as teclas <span class="key">W</span> e <span class="key">S</span> para mudar de pista e desviar dos obstáculos</p>
+        <p>Use as teclas <span class="key">W</span> e <span class="key">S</span> para mudar de pista (apenas nas linhas azuis)</p>
         <p>Use os botões para controlar sua velocidade. Cuidado com os obstáculos rosas!</p>
+        <p>O bot só pode mudar de pista a cada 1.5 segundos (apenas nas linhas vermelhas)</p>
     </div>
 
     <script>
@@ -339,11 +403,16 @@
             botLane: 1,
             obstacles: [],
             nextObstacleTime: 0,
-            score: 0,
+            playerDistance: 0,
+            botDistance: 0,
             playerAcceleration: 0.01,
             decelerationRate: 0.04,
             maxSpeed: 3.0,
-            minSpeed: 0.5
+            minSpeed: 0.5,
+            botCooldown: 0,
+            botCooldownMax: 90, // 1.5 segundos em frames (60fps = 90 frames)
+            obstacleFrequency: 2000, // Quanto maior, menos obstáculos
+            minObstacleFrequency: 500 // Frequência mínima de obstáculos
         };
         
         // Elementos do DOM
@@ -359,6 +428,9 @@
         const gameOverDisplay = document.getElementById('game-over');
         const gameResult = document.getElementById('game-result');
         const restartBtn = document.getElementById('restart');
+        const playerDistanceDisplay = document.getElementById('player-distance');
+        const botDistanceDisplay = document.getElementById('bot-distance');
+        const botCooldownFill = document.getElementById('bot-cooldown-fill');
         
         // Posições Y das pistas (para área do jogador e do bot)
         const playerLanePositions = [90, 150, 210]; // Top, middle, bottom
@@ -374,21 +446,40 @@
             gameConfig.playerLane = 1;
             gameConfig.botLane = 1;
             gameConfig.obstacles = [];
-            gameConfig.score = 0;
+            gameConfig.playerDistance = 0;
+            gameConfig.botDistance = 0;
+            gameConfig.obstacleFrequency = 2000;
+            gameConfig.botCooldown = 0;
             
             updateHealthBars();
             updateSpeedDisplays();
+            updateDistanceDisplays();
+            updateBotCooldown();
             
             // Reposicionar jogadores
             player.style.bottom = '20px';
-            player.style.left = '235px';
+            player.style.left = '385px';
             bot.style.top = '20px';
-            bot.style.left = '235px';
+            bot.style.left = '385px';
             
             // Remover obstáculos antigos
             document.querySelectorAll('.obstacle').forEach(obs => obs.remove());
             
             gameOverDisplay.style.display = 'none';
+        }
+        
+        // Atualizar a dificuldade com base na distância
+        function updateDifficulty() {
+            // Aumentar a frequência de obstáculos a cada 50 metros
+            const playerDistanceLevel = Math.floor(gameConfig.playerDistance / 50);
+            const botDistanceLevel = Math.floor(gameConfig.botDistance / 50);
+            const difficultyLevel = Math.max(playerDistanceLevel, botDistanceLevel);
+            
+            // Reduzir a frequência (aumentar dificuldade) com base na distância
+            gameConfig.obstacleFrequency = Math.max(
+                gameConfig.minObstacleFrequency, 
+                2000 - difficultyLevel * 150
+            );
         }
         
         // Gerar obstáculos
@@ -398,8 +489,8 @@
             const now = Date.now();
             if (now < gameConfig.nextObstacleTime) return;
             
-            // Tempo até o próximo obstáculo (entre 0.8 e 1.5 segundos)
-            gameConfig.nextObstacleTime = now + 800 + Math.random() * 700;
+            // Tempo até o próximo obstáculo baseado na dificuldade
+            gameConfig.nextObstacleTime = now + gameConfig.obstacleFrequency;
             
             // Escolher tipo de obstáculo (triângulo ou retângulo)
             const isTriangle = Math.random() > 0.5;
@@ -420,7 +511,7 @@
                 obstacle.style.top = `${botLanePositions[lane] - (isTriangle ? 15 : 12)}px`;
             }
             
-            obstacle.style.left = '500px';
+            obstacle.style.left = '800px';
             obstacle.dataset.area = area;
             obstacle.dataset.lane = lane;
             
@@ -432,7 +523,7 @@
                 lane: lane,
                 area: area,
                 type: isTriangle ? 'triangle' : 'rectangle',
-                x: 500
+                x: 800
             });
         }
         
@@ -453,7 +544,7 @@
                 obstacle.element.style.left = `${obstacle.x}px`;
                 
                 // Verificar colisão
-                if (obstacle.x < 270 && obstacle.x > 230) {
+                if (obstacle.x < 420 && obstacle.x > 380) {
                     if (obstacle.area === 'player' && obstacle.lane === gameConfig.playerLane) {
                         takeDamage('player');
                         // Efeito visual de colisão
@@ -473,7 +564,6 @@
                 if (obstacle.x < -50) {
                     gameContainer.removeChild(obstacle.element);
                     gameConfig.obstacles.splice(i, 1);
-                    gameConfig.score++;
                 }
             }
         }
@@ -513,38 +603,64 @@
             botSpeedDisplay.textContent = gameConfig.botSpeed.toFixed(2);
         }
         
+        // Atualizar displays de distância
+        function updateDistanceDisplays() {
+            playerDistanceDisplay.textContent = `Jogador: ${Math.floor(gameConfig.playerDistance)}m`;
+            botDistanceDisplay.textContent = `Bot: ${Math.floor(gameConfig.botDistance)}m`;
+        }
+        
+        // Atualizar cooldown do bot
+        function updateBotCooldown() {
+            const cooldownPercent = (gameConfig.botCooldown / gameConfig.botCooldownMax) * 100;
+            botCooldownFill.style.width = `${cooldownPercent}%`;
+        }
+        
         // IA do bot
         function updateBot() {
             if (!gameConfig.gameRunning) return;
+            
+            // Atualizar distância do bot
+            gameConfig.botDistance += gameConfig.botSpeed * 0.1;
+            updateDistanceDisplays();
             
             // Aumentar velocidade do bot gradualmente
             if (gameConfig.botSpeed < gameConfig.maxSpeed) {
                 gameConfig.botSpeed += 0.002;
             }
             
+            // Atualizar cooldown
+            if (gameConfig.botCooldown > 0) {
+                gameConfig.botCooldown--;
+                updateBotCooldown();
+            }
+            
             // Verificar se há obstáculos próximos na pista do bot
             const imminentObstacle = gameConfig.obstacles.find(obs => 
-                obs.area === 'bot' && obs.lane === gameConfig.botLane && obs.x < 400 && obs.x > 300
+                obs.area === 'bot' && obs.lane === gameConfig.botLane && obs.x < 600 && obs.x > 400
             );
             
-            if (imminentObstacle) {
+            if (imminentObstacle && gameConfig.botCooldown === 0) {
                 // Tentar desviar
                 const possibleLanes = [0, 1, 2].filter(lane => lane !== gameConfig.botLane);
                 const safeLane = possibleLanes.find(lane => 
                     !gameConfig.obstacles.some(obs => 
-                        obs.area === 'bot' && obs.lane === lane && obs.x < 400 && obs.x > 300
+                        obs.area === 'bot' && obs.lane === lane && obs.x < 600 && obs.x > 400
                     )
                 );
                 
                 if (safeLane !== undefined) {
                     gameConfig.botLane = safeLane;
                     bot.style.top = `${botLanePositions[safeLane] - 15}px`;
+                    gameConfig.botCooldown = gameConfig.botCooldownMax;
+                    updateBotCooldown();
                 }
             } else {
                 // Se não houver obstáculos, voltar para a pista do meio
-                if (gameConfig.botLane !== 1) {
+                if (gameConfig.botLane !== 1 && gameConfig.botCooldown === 0) {
                     gameConfig.botLane = 1;
                     bot.style.top = `${botLanePositions[1] - 15}px`;
+                    gameConfig.botCooldown = gameConfig.botCooldownMax;
+                    updateBotCooldown();
                 }
             }
             
@@ -554,13 +670,20 @@
         // Finalizar jogo
         function endGame(message) {
             gameConfig.gameRunning = false;
-            gameResult.textContent = `${message} Pontuação: ${gameConfig.score}`;
+            gameResult.textContent = `${message} Distância percorrida: ${Math.floor(gameConfig.playerDistance)}m`;
             gameOverDisplay.style.display = 'block';
         }
         
         // Loop principal do jogo
         function gameLoop() {
             if (gameConfig.gameRunning) {
+                // Atualizar distância do jogador
+                gameConfig.playerDistance += gameConfig.playerSpeed * 0.1;
+                updateDistanceDisplays();
+                
+                // Atualizar dificuldade
+                updateDifficulty();
+                
                 generateObstacle();
                 updateObstacles();
                 updateBot();
@@ -573,13 +696,17 @@
             if (!gameConfig.gameRunning) return;
             
             if (e.key === 'w' || e.key === 'W') {
-                // Mover para cima
-                gameConfig.playerLane = Math.max(0, gameConfig.playerLane - 1);
-                player.style.bottom = `${20 + gameConfig.playerLane * 60}px`;
+                // Mover para cima (apenas se não estiver na pista mais alta)
+                if (gameConfig.playerLane > 0) {
+                    gameConfig.playerLane--;
+                    player.style.bottom = `${20 + gameConfig.playerLane * 60}px`;
+                }
             } else if (e.key === 's' || e.key === 'S') {
-                // Mover para baixo
-                gameConfig.playerLane = Math.min(2, gameConfig.playerLane + 1);
-                player.style.bottom = `${20 + gameConfig.playerLane * 60}px`;
+                // Mover para baixo (apenas se não estiver na pista mais baixa)
+                if (gameConfig.playerLane < 2) {
+                    gameConfig.playerLane++;
+                    player.style.bottom = `${20 + gameConfig.playerLane * 60}px`;
+                }
             }
         });
         
