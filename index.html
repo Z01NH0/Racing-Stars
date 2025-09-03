@@ -579,7 +579,7 @@
             ctx.strokeStyle = '#0074D9';
             ctx.lineWidth = 3;
             ctx.setLineDash([20, 15]);
-            ctx.lineDashOffset = -gameConfig.roadOffsetPlayer;
+            ctx.lineDashOffset = -gameConfig.roadOffsetPlayer * -10;
             
             ctx.beginPath();
             ctx.moveTo(20, 100);
@@ -598,7 +598,7 @@
             
             // Linhas da pista - bot (vermelho)
             ctx.strokeStyle = '#FF4136';
-            ctx.lineDashOffset = -gameConfig.roadOffsetBot;
+            ctx.lineDashOffset = -gameConfig.roadOffsetBot * -10;
             
              ctx.beginPath();
             ctx.moveTo(10, 350);
@@ -621,7 +621,7 @@
             ctx.strokeStyle = '#8B4513';
             ctx.lineWidth = 16;
             ctx.setLineDash([20, 20]);
-            ctx.lineDashOffset = -gameConfig.roadOffsetPlayer;
+            ctx.lineDashOffset = -gameConfig.roadOffsetPlayer * -10;
             
             ctx.beginPath();
             ctx.moveTo(0, 300);
