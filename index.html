@@ -234,6 +234,46 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
         }
         
+        /* Tela de início */
+       
+        
+        /* Loading screen */
+        #loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #0a1419, #0f2027, #152a33);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 200;
+        }
+        
+        .loader {
+            width: 80px;
+            height: 80px;
+            border: 8px solid rgba(79, 224, 255, 0.3);
+            border-radius: 50%;
+            border-top: 8px solid #4fe0ff;
+            animation: spin 1.5s linear infinite;
+            margin-bottom: 30px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #loading-screen h2 {
+            font-size: 32px;
+            color: #4fe0ff;
+            text-shadow: 0 0 15px rgba(79, 224, 255, 0.8);
+            margin-bottom: 15px;
+        }
+        
         /* Instruções */
         .instructions {
             margin-top: 30px;
@@ -286,12 +326,46 @@
         .glow-effect {
             filter: drop-shadow(0 0 8px rgba(79, 224, 255, 0.7));
         }
+        
+        /* Indicador de imunidade */
+        .immunity-indicator {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(79, 224, 255, 0.3);
+            border: 2px solid #4fe0ff;
+            animation: pulse 1s infinite;
+            display: none;
+            z-index: 15;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.7; }
+        }
+        
+        #player-immunity {
+            top: 70px;
+            left: 20px;
+        }
+        
+        #bot-immunity {
+            bottom: 70px;
+            right: 20px;
+        }
     </style>
 </head>
 <body>
     <h1>Racing Stars</h1>
     
     <div id="game-container">
+        <div id="loading-screen">
+            <div class="loader"></div>
+            <h2>Carregando...</h2>
+        </div>
+        
         <canvas id="game-canvas"></canvas>
         
         <div id="ui-layer">
@@ -304,6 +378,10 @@
                 <div id="bot-health-fill" class="health-fill"></div>
             </div>
             
+            <!-- Indicadores de imunidade -->
+            <div id="player-immunity" class="immunity-indicator"></div>
+            <div id="bot-immunity" class="immunity-indicator"></div>
+            
             <!-- Distâncias -->
             <div id="player-distance" class="distance-display">Jogador: 0m</div>
             <div id="bot-distance" class="distance-display">Bot: 0m</div>
@@ -312,6 +390,9 @@
             <div id="bot-cooldown">
                 <div id="bot-cooldown-fill"></div>
             </div>
+            
+            <!-- Tela de início -->
+        
             
             <!-- Tela de game over -->
             <div id="game-over">
@@ -348,8 +429,8 @@
             playerHealth: 100,
             botHealth: 100,
             obstacleDamage: 10,
-            gameRunning: false,
-            playerLane: 1, // 0: top, 1: middle, 2: bottom
+            gameRunning: true,
+            playerLane: 1,
             botLane: 1,
             obstacles: [],
             nextObstacleTime: 0,
@@ -359,14 +440,20 @@
             decelerationRate: 0.05,
             maxSpeed: 3.5,
             minSpeed: 0.5,
-            botSpeedIncrease: 0.04, // Aumento de velocidade do bot por segundo
-            obstacleFrequency: 1800, // Quanto maior, menos obstáculos
-            minObstacleFrequency: 400, // Frequência mínima de obstáculos
-            lastBotSpeedIncrease: 0, // Timestamp do último aumento de velocidade do bot
-            botMoveCooldown: 1200, // Cooldown para movimentos do bot
-            lastBotMove: 0, // Timestamp do último movimento do bot
-            roadOffset: 0, // Para efeito de movimento da pista
-            particles: [] // Partículas para efeitos visuais
+            botSpeedIncrease: 0.04,
+            obstacleFrequency: 1800,
+            minObstacleFrequency: 400,
+            lastBotSpeedIncrease: 0,
+            botMoveCooldown: 1200,
+            lastBotMove: 0,
+            roadOffsetPlayer: 0,
+            roadOffsetBot: 0,
+            particles: [],
+            playerImmune: false,
+            botImmune: false,
+            playerImmunityTime: 0,
+            botImmunityTime: 0,
+            
         };
         
         // Elementos do DOM
@@ -386,6 +473,11 @@
         const botCooldownDisplay = document.getElementById('bot-cooldown');
         const botCooldownFill = document.getElementById('bot-cooldown-fill');
         
+        
+        const loadingScreen = document.getElementById('loading-screen');
+        const playerImmunityIndicator = document.getElementById('player-immunity');
+        const botImmunityIndicator = document.getElementById('bot-immunity');
+        
         // Ajustar tamanho do canvas
         canvas.width = 1000;
         canvas.height = 600;
@@ -393,13 +485,6 @@
         // Posições Y das pistas
         const playerLanePositions = [100, 170, 250];
         const botLanePositions = [350, 400, 450];
-        
-        // Imagens e recursos (seriam carregados em produção)
-        const carImg = new Image();
-        carImg.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMTI1LjUgMzg2LjVjLTIzLjYgMC00Mi43LTE5LjEtNDIuNy00Mi43czE5LjEtNDIuNyA0Mi43LTQyLjcgNDIuNyAxOS4xIDQyLjcgNDIuNy0xOS4xIDQyLjctNDIuNyA0Mi43em0yNjEgMGMtMjMuNiAwLTQyLjctMTkuMS00Mi43LTQyLjdzMTkuMS00Mi43IDQyLjctNDIuNyA0Mi43IDE5LjEgNDIuNyA0Mi43LTE5LjEgNDIuNy00Mi43IDQyLjd6TTQ2OS41IDI1NmMwIDQuOS0uNSA5LjgtMS4zIDE0LjZMODQxLjQgMTQ0LjVjNC44LTE0LjIgNy42LTI5LjIgNy42LTQ0LjUgMC01My00My05Ni05Ni05NnMtOTYgNDMtOTYgOTZjMCAxMS41IDIuMiAyMi41IDYgMzJoLTI5NGMzLjgtOS41IDYtMjAuNSA2LTMyIDAtNTMtNDMtOTYtOTYtOTZTOTYgNDcgOTYgMTAwYzAgMTUuMyAyLjggMzAuMyA3LjYgNDQuNUw0My44IDI3MC42Yy0uOC00LjgtMS4zLTkuNy0xLjMtMTQuNiAwLTUzIDQzLTk2IDk2LTk2czk2IDQzIDk2IDk2YzAgMjMuNi04LjIgNDU4LjUtMjQgNjRoMzUyYy0xNS44LTE4LjUtMjQtNDAuNC0yNC02NCAwLTUzIDQzLTk2IDk2LTk2czk2IDQzIDk2IDk2eiIvPjwvc3ZnPg==';
-        
-        const botCarImg = new Image();
-        botCarImg.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cGF0aCBmaWxsPSIjZmZmIiBkPSJNMTI1LjUgMzg2LjVjLTIzLjYgMC00Mi43LTE5LjEtNDIuNy00Mi43czE5LjEtNDIuNyA0Mi43LTQyLjcgNDIuNyAxOS4xIDQyLjcgNDIuNy0xOS4xIDQyLjctNDIuNyA0Mi43em0yNjEgMGMtMjMuNiAwLTQyLjctMTkuMS00Mi43LTQyLjdzMTkuMS00Mi43IDQyLjctNDIuNyA0Mi43IDE5LjEgNDIuNyA0Mi43LTE5LjEgNDIuNy00Mi43IDQyLjd6TTQ2OS41IDI1NmMwIDQuOS0uNSA5LjgtMS4zIDE0LjZMODQxLjQgMTQ0LjVjNC44LTE0LjIgNy42LTI5LjIgNy42LTQ0LjUgMC01My0zNy05Ni05MC05NnMtOTAgNDMtOTAgOTZjMCAxMS41IDIuMiAyMi41IDYgMzJoLTI5NGMzLjgtOS41IDYtMjAuNSA2LTMyIDAtNTMtMzctOTYtOTAtOTZTMjYgNDcgMjYgMTAwYzAgMTUuMyAyLjggMzAuMyA3LjYgNDQuNUw0My44IDI3MC42Yy0uOC00LjgtMS4zLTkuNy0xLjMtMTQuNiAwLTUzIDM3LTk2IDkwLTk2czkwIDQzIDkwIDk2YzAgMjMuNi04LjIgNDU4LjUtMjQgNjRoMzUyYy0xNS44LTE4LjUtMjQtNDAuNC0yNC02NCAwLTUzIDM3LTk2IDkwLTk2czkwIDQzIDkwIDk2eiIvPjwvc3ZnPg==';
         
         // Inicializar o jogo
         function initGame() {
@@ -416,19 +501,24 @@
             gameConfig.obstacleFrequency = 1800;
             gameConfig.lastBotSpeedIncrease = Date.now();
             gameConfig.lastBotMove = Date.now();
-            gameConfig.roadOffset = 0;
+            gameConfig.roadOffsetPlayer = 0;
+            gameConfig.roadOffsetBot = 0;
             gameConfig.particles = [];
+            gameConfig.playerImmune = false;
+            gameConfig.botImmune = false;
+            gameConfig.playerImmunityTime = 0;
+            gameConfig.botImmunityTime = 0;
             
             updateHealthBars();
             updateSpeedDisplays();
             updateDistanceDisplays();
             
-            // Esconder cooldown do bot
             botCooldownDisplay.style.display = 'none';
+            playerImmunityIndicator.style.display = 'none';
+            botImmunityIndicator.style.display = 'none';
             
             gameOverDisplay.style.display = 'none';
             
-            // Criar partículas iniciais
             createParticles();
         }
         
@@ -477,15 +567,19 @@
             ctx.fillStyle = '#1a1a2e';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Efeito de movimento da pista
-            gameConfig.roadOffset += gameConfig.playerSpeed * 0.8;
-            if (gameConfig.roadOffset >= 60) gameConfig.roadOffset = 0;
+            // Efeito de movimento da pista do jogador
+            gameConfig.roadOffsetPlayer += gameConfig.playerSpeed * 0.8;
+            if (gameConfig.roadOffsetPlayer >= 60) gameConfig.roadOffsetPlayer = 0;
+            
+            // Efeito de movimento da pista do bot
+            gameConfig.roadOffsetBot += gameConfig.botSpeed * 0.8;
+            if (gameConfig.roadOffsetBot >= 60) gameConfig.roadOffsetBot = 0;
             
             // Linhas da pista - jogador (azul)
             ctx.strokeStyle = '#0074D9';
             ctx.lineWidth = 3;
             ctx.setLineDash([20, 15]);
-            ctx.lineDashOffset = -gameConfig.roadOffset * -45;
+            ctx.lineDashOffset = -gameConfig.roadOffsetPlayer;
             
             ctx.beginPath();
             ctx.moveTo(20, 100);
@@ -504,6 +598,7 @@
             
             // Linhas da pista - bot (vermelho)
             ctx.strokeStyle = '#FF4136';
+            ctx.lineDashOffset = -gameConfig.roadOffsetBot;
             
              ctx.beginPath();
             ctx.moveTo(10, 350);
@@ -526,7 +621,7 @@
             ctx.strokeStyle = '#8B4513';
             ctx.lineWidth = 16;
             ctx.setLineDash([20, 20]);
-            ctx.lineDashOffset = -gameConfig.roadOffset * -4;
+            ctx.lineDashOffset = -gameConfig.roadOffsetPlayer;
             
             ctx.beginPath();
             ctx.moveTo(0, 300);
@@ -545,9 +640,8 @@
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
         
-        // Desenhar jogadores
-        function drawPlayers() {
-            // Desenhar jogador
+        // Desenhar carro do jogador
+        function drawPlayerCar() {
             ctx.save();
             ctx.translate(500, playerLanePositions[gameConfig.playerLane]);
             
@@ -559,11 +653,50 @@
             ctx.fillStyle = glow;
             ctx.fillRect(-40, -40, 80, 80);
             
-            // Desenhar carro do jogador
-            ctx.drawImage(carImg, -25, -25, 50, 50);
-            ctx.restore();
+            // Corpo do carro
+            ctx.fillStyle = '#0074D9';
+            ctx.fillRect(-25, -15, 50, 30);
             
-            // Desenhar bot
+            // Parte superior do carro
+            ctx.fillStyle = '#005caf';
+            ctx.beginPath();
+            ctx.moveTo(-20, -15);
+            ctx.lineTo(20, -15);
+            ctx.lineTo(15, -25);
+            ctx.lineTo(-15, -25);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Janelas
+            ctx.fillStyle = '#a8d8ff';
+            ctx.fillRect(-15, -22, 30, 7);
+            
+            // Rodas
+            ctx.fillStyle = '#333';
+            ctx.fillRect(-25, -20, 10, 8);
+            ctx.fillRect(15, -20, 10, 8);
+            ctx.fillRect(-25, 12, 10, 8);
+            ctx.fillRect(15, 12, 10, 8);
+            
+            // Detalhes
+            ctx.fillStyle = '#4fe0ff';
+            ctx.fillRect(-20, -5, 5, 5);
+            ctx.fillRect(15, -5, 5, 5);
+            
+            // Faróis
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.arc(-25, -8, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(25, -8, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+        
+        // Desenhar carro do bot
+        function drawBotCar() {
             ctx.save();
             ctx.translate(500, botLanePositions[gameConfig.botLane]);
             
@@ -575,53 +708,46 @@
             ctx.fillStyle = botGlow;
             ctx.fillRect(-40, -40, 80, 80);
             
-            // Desenhar carro do bot
-            ctx.drawImage(botCarImg, -25, -25, 50, 50);
+            // Corpo do carro
+            ctx.fillStyle = '#FF4136';
+            ctx.fillRect(-25, -15, 50, 30);
+            
+            // Parte superior do carro
+            ctx.fillStyle = '#c0392b';
+            ctx.beginPath();
+            ctx.moveTo(-20, -15);
+            ctx.lineTo(20, -15);
+            ctx.lineTo(15, -25);
+            ctx.lineTo(-15, -25);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Janelas
+            ctx.fillStyle = '#a8d8ff';
+            ctx.fillRect(-15, -22, 30, 7);
+            
+            // Rodas
+            ctx.fillStyle = '#333';
+            ctx.fillRect(-25, -20, 10, 8);
+            ctx.fillRect(15, -20, 10, 8);
+            ctx.fillRect(-25, 12, 10, 8);
+            ctx.fillRect(15, 12, 10, 8);
+            
+            // Detalhes
+            ctx.fillStyle = '#ff7f7f';
+            ctx.fillRect(-20, -5, 5, 5);
+            ctx.fillRect(15, -5, 5, 5);
+            
+            // Faróis
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.arc(-25, -8, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(25, -8, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
             ctx.restore();
-        }
-        
-        // Desenhar obstáculos
-        function drawObstacles() {
-            for (const obstacle of gameConfig.obstacles) {
-                ctx.save();
-                ctx.translate(obstacle.x, obstacle.y);
-                
-                if (obstacle.type === 'triangle') {
-                    // Obstáculo triangular
-                    ctx.fillStyle = '#FF00FF';
-                    ctx.beginPath();
-                    ctx.moveTo(0, -15);
-                    ctx.lineTo(-15, 15);
-                    ctx.lineTo(15, 15);
-                    ctx.closePath();
-                    ctx.fill();
-                    
-                    // Brilho
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-                    ctx.beginPath();
-                    ctx.moveTo(-5, -5);
-                    ctx.lineTo(-10, 10);
-                    ctx.lineTo(5, 10);
-                    ctx.closePath();
-                    ctx.fill();
-                } else {
-                    // Obstáculo retangular
-                    ctx.fillStyle = '#cc00cc';
-                    ctx.fillRect(-20, -15, 40, 30);
-                    
-                    // Detalhes
-                    ctx.fillStyle = '#ff00ff';
-                    ctx.fillRect(-15, -10, 30, 20);
-                    
-                    ctx.fillStyle = 'white';
-                    ctx.font = 'bold 16px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText('!', 0, 0);
-                }
-                
-                ctx.restore();
-            }
         }
         
         // Atualizar a dificuldade com base na distância
@@ -640,43 +766,34 @@
         function updateBot() {
             if (!gameConfig.gameRunning) return;
             
-            // Aumentar velocidade do bot com o tempo
             increaseBotSpeed();
             
-            // Atualizar cooldown do bot
             updateBotCooldown();
             
-            // Atualizar distância do bot
             gameConfig.botDistance += gameConfig.botSpeed * 0.1;
             updateDistanceDisplays();
             
-            // Verificar se pode mover (cooldown)
             const now = Date.now();
             const canMove = now - gameConfig.lastBotMove >= gameConfig.botMoveCooldown;
             
-            // Verificar obstáculos próximos
             const imminentObstacles = gameConfig.obstacles.filter(obs => 
                 obs.area === 'bot' && obs.x < 600 && obs.x > 400
             );
             
-            // Verificar se há obstáculo na pista atual
             const obstacleInCurrentLane = imminentObstacles.find(obs => 
                 obs.lane === gameConfig.botLane
             );
             
             if (obstacleInCurrentLane && canMove) {
-                // Tentar encontrar uma pista segura
                 const possibleLanes = [0, 1, 2].filter(lane => lane !== gameConfig.botLane);
                 const safeLanes = possibleLanes.filter(lane => 
                     !imminentObstacles.some(obs => obs.lane === lane)
                 );
                 
                 if (safeLanes.length > 0) {
-                    // Escolher a pista mais segura (mais longe de obstáculos)
                     gameConfig.botLane = safeLanes[0];
                     gameConfig.lastBotMove = now;
                 } else {
-                    // Se não há pista segura, escolher a com menos obstáculos
                     const laneObstacleCount = possibleLanes.map(lane => ({
                         lane,
                         count: imminentObstacles.filter(obs => obs.lane === lane).length
@@ -687,7 +804,6 @@
                     gameConfig.lastBotMove = now;
                 }
             } else if (!obstacleInCurrentLane && gameConfig.botLane !== 1 && canMove) {
-                // Voltar para a pista do meio se estiver seguro
                 const middleLaneSafe = !imminentObstacles.some(obs => obs.lane === 1);
                 
                 if (middleLaneSafe) {
@@ -696,7 +812,6 @@
                 }
             }
             
-            // Movimento evasivo ocasional mesmo sem obstáculos (para parecer mais humano)
             if (canMove && !obstacleInCurrentLane && Math.random() < 0.005) {
                 const randomMove = Math.random() < 0.5 ? -1 : 1;
                 const newLane = gameConfig.botLane + randomMove;
@@ -745,17 +860,76 @@
             const inPlayerArea = Math.random() > 0.5;
             const lane = Math.floor(Math.random() * 3);
             
+            // Obstáculo especial após 300m
+            let isSpecialObstacle = false;
+            if (gameConfig.playerDistance >= 300 || gameConfig.botDistance >= 300) {
+                isSpecialObstacle = Math.random() < 0.2;
+            }
+            
             const obstacle = {
-                type: isTriangle ? 'triangle' : 'rectangle',
+                type: isSpecialObstacle ? 'special' : (isTriangle ? 'triangle' : 'rectangle'),
                 area: inPlayerArea ? 'player' : 'bot',
                 lane: lane,
                 x: 1000,
                 y: inPlayerArea ? playerLanePositions[lane] : botLanePositions[lane],
-                width: isTriangle ? 30 : 40,
-                height: isTriangle ? 30 : 30
+                width: isSpecialObstacle ? 60 : (isTriangle ? 30 : 40),
+                height: isSpecialObstacle ? 30 : (isTriangle ? 30 : 30)
             };
             
             gameConfig.obstacles.push(obstacle);
+        }
+        
+        // Desenhar obstáculos
+        function drawObstacles() {
+            for (const obstacle of gameConfig.obstacles) {
+                ctx.save();
+                ctx.translate(obstacle.x, obstacle.y);
+                
+                if (obstacle.type === 'triangle') {
+                    ctx.fillStyle = '#FF00FF';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -15);
+                    ctx.lineTo(-15, 15);
+                    ctx.lineTo(15, 15);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.beginPath();
+                    ctx.moveTo(-5, -5);
+                    ctx.lineTo(-10, 10);
+                    ctx.lineTo(5, 10);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (obstacle.type === 'special') {
+                    // Obstáculo especial (verde)
+                    ctx.fillStyle = '#00CC00';
+                    ctx.fillRect(-30, -15, 60, 30);
+                    
+                    ctx.fillStyle = '#00FF00';
+                    ctx.fillRect(-25, -10, 50, 20);
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('X2', 0, 0);
+                } else {
+                    ctx.fillStyle = '#cc00cc';
+                    ctx.fillRect(-20, -15, 40, 30);
+                    
+                    ctx.fillStyle = '#ff00ff';
+                    ctx.fillRect(-15, -10, 30, 20);
+                    
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('!', 0, 0);
+                }
+                
+                ctx.restore();
+            }
         }
         
         // Atualizar obstáculos
@@ -765,14 +939,12 @@
             for (let i = gameConfig.obstacles.length - 1; i >= 0; i--) {
                 const obstacle = gameConfig.obstacles[i];
                 
-                // Mover obstáculo
                 if (obstacle.area === 'player') {
                     obstacle.x -= 5 * gameConfig.playerSpeed;
                 } else {
                     obstacle.x -= 5 * gameConfig.botSpeed;
                 }
                 
-                // Verificar colisão
                 if (obstacle.x < 550 && obstacle.x > 450) {
                     const playerRect = {
                         x: 485,
@@ -796,19 +968,20 @@
                     };
                     
                     if (obstacle.area === 'player' && obstacle.lane === gameConfig.playerLane) {
-                        if (checkCollision(playerRect, obstacleRect)) {
-                            takeDamage('player');
+                        if (checkCollision(playerRect, obstacleRect) && !gameConfig.playerImmune) {
+                            const damage = obstacle.type === 'special' ? 30 : gameConfig.obstacleDamage;
+                            takeDamage('player', damage);
                         }
                     }
                     
                     if (obstacle.area === 'bot' && obstacle.lane === gameConfig.botLane) {
-                        if (checkCollision(botRect, obstacleRect)) {
-                            takeDamage('bot');
+                        if (checkCollision(botRect, obstacleRect) && !gameConfig.botImmune) {
+                            const damage = obstacle.type === 'special' ? 30 : gameConfig.obstacleDamage;
+                            takeDamage('bot', damage);
                         }
                     }
                 }
                 
-                // Remover obstáculos que saíram da tela
                 if (obstacle.x < -50) {
                     gameConfig.obstacles.splice(i, 1);
                 }
@@ -824,25 +997,50 @@
         }
         
         // Lógica de dano
-        function takeDamage(target) {
+        function takeDamage(target, damage) {
             if (target === 'player') {
-                gameConfig.playerHealth -= gameConfig.obstacleDamage;
+                gameConfig.playerHealth -= damage;
                 if (gameConfig.playerHealth < 0) gameConfig.playerHealth = 0;
                 
                 updateHealthBars();
+                
+                // Ativar imunidade
+                gameConfig.playerImmune = true;
+                gameConfig.playerImmunityTime = Date.now();
+                playerImmunityIndicator.style.display = 'block';
                 
                 if (gameConfig.playerHealth <= 0) {
                     endGame('Você perdeu! O bot venceu a corrida.');
                 }
             } else {
-                gameConfig.botHealth -= gameConfig.obstacleDamage;
+                gameConfig.botHealth -= damage;
                 if (gameConfig.botHealth < 0) gameConfig.botHealth = 0;
                 
                 updateHealthBars();
                 
+                // Ativar imunidade
+                gameConfig.botImmune = true;
+                gameConfig.botImmunityTime = Date.now();
+                botImmunityIndicator.style.display = 'block';
+                
                 if (gameConfig.botHealth <= 0) {
                     endGame('Parabéns! Você venceu o bot.');
                 }
+            }
+        }
+        
+        // Verificar imunidade
+        function checkImmunity() {
+            const now = Date.now();
+            
+            if (gameConfig.playerImmune && now - gameConfig.playerImmunityTime >= 500) {
+                gameConfig.playerImmune = false;
+                playerImmunityIndicator.style.display = 'none';
+            }
+            
+            if (gameConfig.botImmune && now - gameConfig.botImmunityTime >= 500) {
+                gameConfig.botImmune = false;
+                botImmunityIndicator.style.display = 'none';
             }
         }
         
@@ -873,13 +1071,12 @@
         
         // Loop principal de renderização
         function render() {
-            // Limpar canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Desenhar elementos
             drawTrack();
             drawObstacles();
-            drawPlayers();
+            drawPlayerCar();
+            drawBotCar();
             drawParticles();
             
             requestAnimationFrame(render);
@@ -888,19 +1085,18 @@
         // Loop principal do jogo
         function gameLoop() {
             if (gameConfig.gameRunning) {
-                // Atualizar distância do jogador
                 gameConfig.playerDistance += gameConfig.playerSpeed * 0.1;
                 updateDistanceDisplays();
                 
-                // Atualizar dificuldade
                 updateDifficulty();
                 
-                // Atualizar partículas
                 updateParticles();
                 
                 generateObstacle();
                 updateObstacles();
                 updateBot();
+                
+                checkImmunity();
             }
             setTimeout(() => gameLoop(), 1000/60);
         }
@@ -934,10 +1130,20 @@
             updateSpeedDisplays();
         });
         
-        restartBtn.addEventListener('click', initGame);
+        restartBtn.addEventListener('click', () => {
+            initGame();
+            gameOverDisplay.style.display = 'none';
+        });
+        
+       
+        
+        // Simular carregamento
+        setTimeout(() => {
+            loadingScreen.style.display = 'none';
+            
+        }, 2000);
         
         // Inicializar o jogo
-        initGame();
         render();
         gameLoop();
     </script>
