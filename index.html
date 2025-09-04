@@ -235,7 +235,62 @@
         }
         
         /* Tela de início */
-       
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 150;
+            backdrop-filter: blur(10px);
+        }
+        
+        #start-screen h2 {
+            font-size: 48px;
+            color: #4fe0ff;
+            text-shadow: 0 0 20px rgba(79, 224, 255, 0.8);
+            margin-bottom: 20px;
+        }
+        
+        #start-screen p {
+            font-size: 20px;
+            margin-bottom: 40px;
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.5;
+        }
+        
+        .game-mode {
+            display: flex;
+            gap: 40px;
+            margin-top: 20px;
+        }
+        
+        .mode-btn {
+            padding: 20px 40px;
+            font-size: 24px;
+            background: linear-gradient(to bottom, #0074D9, #005caf);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+        
+        .mode-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            background: linear-gradient(to bottom, #005caf, #00478f);
+        }
         
         /* Loading screen */
         #loading-screen {
@@ -323,6 +378,29 @@
             border-radius: 6px;
         }
         
+        /* Indicador de cooldown do jogador */
+        #player-cooldown {
+            position: absolute;
+            top: 70px;
+            left: 20px;
+            width: 220px;
+            height: 12px;
+            background: rgba(30, 30, 40, 0.7);
+            border-radius: 6px;
+            overflow: hidden;
+            display: none;
+            z-index: 20;
+            border: 1px solid rgba(79, 224, 255, 0.3);
+        }
+        
+        #player-cooldown-fill {
+            height: 100%;
+            background: linear-gradient(to right, #0074D9, #4fe0ff);
+            width: 0%;
+            transition: width 0.1s;
+            border-radius: 6px;
+        }
+        
         .glow-effect {
             filter: drop-shadow(0 0 8px rgba(79, 224, 255, 0.7));
         }
@@ -355,6 +433,53 @@
             bottom: 70px;
             right: 20px;
         }
+        
+        /* Efeitos de turbo */
+        .turbo-effect {
+            position: absolute;
+            width: 100px;
+            height: 30px;
+            background: linear-gradient(to right, transparent, #ff7700, #ffff00, #ff7700, transparent);
+            border-radius: 50%;
+            filter: blur(5px);
+            opacity: 0;
+            z-index: 10;
+        }
+        
+        .brake-effect {
+            position: absolute;
+            width: 80px;
+            height: 20px;
+            background: linear-gradient(to right, transparent, #ff0000, #ff3333, #ff0000, transparent);
+            border-radius: 50%;
+            filter: blur(4px);
+            opacity: 0;
+            z-index: 10;
+        }
+        
+        /* Indicadores de controle */
+        .control-indicator {
+            position: absolute;
+            font-size: 16px;
+            background: rgba(10, 15, 20, 0.8);
+            padding: 8px 15px;
+            border-radius: 8px;
+            z-index: 20;
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(79, 224, 255, 0.3);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+            font-weight: bold;
+        }
+        
+        #player-controls {
+            bottom: 20px;
+            left: 20px;
+        }
+        
+        #bot-controls {
+            top: 20px;
+            right: 20px;
+        }
     </style>
 </head>
 <body>
@@ -364,6 +489,15 @@
         <div id="loading-screen">
             <div class="loader"></div>
             <h2>Carregando...</h2>
+        </div>
+        
+        <div id="start-screen">
+            <h2>Racing Stars</h2>
+            <p>Corra contra o tempo e evite obstáculos nesta emocionante corrida espacial! Use suas habilidades para chegar ao final sem colidir com os perigos da pista.</p>
+            <div class="game-mode">
+                <button id="solo-mode" class="mode-btn">Solo</button>
+                <button id="multiplayer-mode" class="mode-btn">Multiplayer</button>
+            </div>
         </div>
         
         <canvas id="game-canvas"></canvas>
@@ -378,6 +512,15 @@
                 <div id="bot-health-fill" class="health-fill"></div>
             </div>
             
+            <!-- Indicadores de cooldown -->
+            <div id="player-cooldown">
+                <div id="player-cooldown-fill"></div>
+            </div>
+            
+            <div id="bot-cooldown">
+                <div id="bot-cooldown-fill"></div>
+            </div>
+            
             <!-- Indicadores de imunidade -->
             <div id="player-immunity" class="immunity-indicator"></div>
             <div id="bot-immunity" class="immunity-indicator"></div>
@@ -386,13 +529,14 @@
             <div id="player-distance" class="distance-display">Jogador: 0m</div>
             <div id="bot-distance" class="distance-display">Bot: 0m</div>
             
-            <!-- Indicador de cooldown do bot -->
-            <div id="bot-cooldown">
-                <div id="bot-cooldown-fill"></div>
-            </div>
+            <!-- Indicadores de controle -->
             
-            <!-- Tela de início -->
-        
+            
+            <!-- Efeitos de turbo e freio -->
+            <div id="player-turbo" class="turbo-effect"></div>
+            <div id="player-brake" class="brake-effect"></div>
+            <div id="bot-turbo" class="turbo-effect"></div>
+            <div id="bot-brake" class="brake-effect"></div>
             
             <!-- Tela de game over -->
             <div id="game-over">
@@ -403,22 +547,17 @@
         </div>
     </div>
     
-    <!-- Controles -->
-    <div class="controls">
-        <button id="accelerate" class="control-btn">Acelerar</button>
-        <button id="decelerate" class="control-btn">Desacelerar</button>
-    </div>
-    
     <!-- Display de velocidade -->
     <div class="speed-display">
         <div>Sua velocidade: <span id="player-speed">1.00</span>x</div>
-        <div>Velocidade do bot: <span id="bot-speed">1.00</span>x</div>
+        <div id="bot-speed-container">Velocidade do oponente: <span id="bot-speed">1.00</span>x</div>
     </div>
     
     <!-- Instruções -->
-    <div class="instructions">
+    <div class="instructions">  
+      <p>Jogador 1</p>
         <p>Use as teclas <span class="key">W</span> e <span class="key">S</span> para mudar de pista</p>
-        <p>Use os botões para controlar sua velocidade. Cuidado com os obstáculos!</p>
+        <p>Use <span class="key">D</span> para acelerar e <span class="key">A</span> para frear. Cuidado com os obstáculos!</p>
     </div>
 
     <script>
@@ -429,16 +568,17 @@
             playerHealth: 100,
             botHealth: 100,
             obstacleDamage: 10,
-            gameRunning: true,
+            gameRunning: false,
+            gameMode: 'solo', // 'solo' or 'multiplayer'
             playerLane: 1,
             botLane: 1,
             obstacles: [],
             nextObstacleTime: 0,
             playerDistance: 0,
             botDistance: 0,
-            playerAcceleration: 0.02,
-            decelerationRate: 0.05,
-            maxSpeed: 3.5,
+            playerAcceleration: 0.2,
+            decelerationRate: 0.15,
+            maxSpeed: 10.0,
             minSpeed: 0.5,
             botSpeedIncrease: 0.04,
             obstacleFrequency: 1800,
@@ -453,7 +593,20 @@
             botImmune: false,
             playerImmunityTime: 0,
             botImmunityTime: 0,
-            
+            playerTurboCooldown: 1500,
+            playerBrakeCooldown: 500,
+            botTurboCooldown: 1500,
+            botBrakeCooldown: 500,
+            lastPlayerTurbo: 0,
+            lastPlayerBrake: 0,
+            lastBotTurbo: 0,
+            lastBotBrake: 0,
+            playerTurboActive: false,
+            playerBrakeActive: false,
+            botTurboActive: false,
+            botBrakeActive: false,
+            turboEffectDuration: 300,
+            brakeEffectDuration: 200
         };
         
         // Elementos do DOM
@@ -461,10 +614,9 @@
         const ctx = canvas.getContext('2d');
         const playerHealthFill = document.getElementById('player-health-fill');
         const botHealthFill = document.getElementById('bot-health-fill');
-        const accelerateBtn = document.getElementById('accelerate');
-        const decelerateBtn = document.getElementById('decelerate');
         const playerSpeedDisplay = document.getElementById('player-speed');
         const botSpeedDisplay = document.getElementById('bot-speed');
+        const botSpeedContainer = document.getElementById('bot-speed-container');
         const gameOverDisplay = document.getElementById('game-over');
         const gameResult = document.getElementById('game-result');
         const restartBtn = document.getElementById('restart');
@@ -472,11 +624,20 @@
         const botDistanceDisplay = document.getElementById('bot-distance');
         const botCooldownDisplay = document.getElementById('bot-cooldown');
         const botCooldownFill = document.getElementById('bot-cooldown-fill');
-        
-        
+        const playerCooldownDisplay = document.getElementById('player-cooldown');
+        const playerCooldownFill = document.getElementById('player-cooldown-fill');
         const loadingScreen = document.getElementById('loading-screen');
+        const startScreen = document.getElementById('start-screen');
+        const soloModeBtn = document.getElementById('solo-mode');
+        const multiplayerModeBtn = document.getElementById('multiplayer-mode');
         const playerImmunityIndicator = document.getElementById('player-immunity');
         const botImmunityIndicator = document.getElementById('bot-immunity');
+        const playerTurboEffect = document.getElementById('player-turbo');
+        const playerBrakeEffect = document.getElementById('player-brake');
+        const botTurboEffect = document.getElementById('bot-turbo');
+        const botBrakeEffect = document.getElementById('bot-brake');
+        const playerControlsDisplay = document.getElementById('player-controls');
+        const botControlsDisplay = document.getElementById('bot-controls');
         
         // Ajustar tamanho do canvas
         canvas.width = 1000;
@@ -508,16 +669,38 @@
             gameConfig.botImmune = false;
             gameConfig.playerImmunityTime = 0;
             gameConfig.botImmunityTime = 0;
+            gameConfig.lastPlayerTurbo = 0;
+            gameConfig.lastPlayerBrake = 0;
+            gameConfig.lastBotTurbo = 0;
+            gameConfig.lastBotBrake = 0;
+            gameConfig.playerTurboActive = false;
+            gameConfig.playerBrakeActive = false;
+            gameConfig.botTurboActive = false;
+            gameConfig.botBrakeActive = false;
             
             updateHealthBars();
             updateSpeedDisplays();
             updateDistanceDisplays();
             
             botCooldownDisplay.style.display = 'none';
+            playerCooldownDisplay.style.display = 'none';
             playerImmunityIndicator.style.display = 'none';
             botImmunityIndicator.style.display = 'none';
+            playerTurboEffect.style.opacity = '0';
+            playerBrakeEffect.style.opacity = '0';
+            botTurboEffect.style.opacity = '0';
+            botBrakeEffect.style.opacity = '0';
             
             gameOverDisplay.style.display = 'none';
+            
+            // Atualizar texto de controles baseado no modo
+            if (gameConfig.gameMode === 'multiplayer') {
+                botControlsDisplay.textContent = 'Jogador 2: ▲/▼ (Mover) | ▶ (Turbo) | ◀ (Frear)';
+                botSpeedContainer.textContent = 'Velocidade do Jogador 2: ';
+            } else {
+                botControlsDisplay.textContent = 'Bot: IA Controlada';
+                botSpeedContainer.textContent = 'Velocidade do Bot: ';
+            }
             
             createParticles();
         }
@@ -645,7 +828,17 @@
             ctx.save();
             ctx.translate(500, playerLanePositions[gameConfig.playerLane]);
             
-            // Efeito de luz
+            // Efeito de turbo
+            if (gameConfig.playerTurboActive) {
+                const turboGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 60);
+                turboGlow.addColorStop(0, 'rgba(255, 119, 0, 0.8)');
+                turboGlow.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = turboGlow;
+                ctx.fillRect(-60, -60, 120, 120);
+            }
+            
+            // Efeito de luz normal
             const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 40);
             glow.addColorStop(0, 'rgba(0, 116, 217, 0.8)');
             glow.addColorStop(1, 'transparent');
@@ -693,12 +886,34 @@
             ctx.fill();
             
             ctx.restore();
+            
+            // Posicionar efeito de turbo
+            if (gameConfig.playerTurboActive) {
+                playerTurboEffect.style.left = '430px';
+                playerTurboEffect.style.top = (playerLanePositions[gameConfig.playerLane] + 15) + 'px';
+            }
+            
+            // Posicionar efeito de freio
+            if (gameConfig.playerBrakeActive) {
+                playerBrakeEffect.style.left = '470px';
+                playerBrakeEffect.style.top = (playerLanePositions[gameConfig.playerLane] + 15) + 'px';
+            }
         }
         
         // Desenhar carro do bot
         function drawBotCar() {
             ctx.save();
             ctx.translate(500, botLanePositions[gameConfig.botLane]);
+            
+            // Efeito de turbo
+            if (gameConfig.botTurboActive) {
+                const botTurboGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 60);
+                botTurboGlow.addColorStop(0, 'rgba(255, 119, 0, 0.8)');
+                botTurboGlow.addColorStop(1, 'transparent');
+                
+                ctx.fillStyle = botTurboGlow;
+                ctx.fillRect(-60, -60, 120, 120);
+            }
             
             // Efeito de luz
             const botGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 40);
@@ -748,6 +963,18 @@
             ctx.fill();
             
             ctx.restore();
+            
+            // Posicionar efeito de turbo
+            if (gameConfig.botTurboActive) {
+                botTurboEffect.style.left = '430px';
+                botTurboEffect.style.top = (botLanePositions[gameConfig.botLane] + 15) + 'px';
+            }
+            
+            // Posicionar efeito de freio
+            if (gameConfig.botBrakeActive) {
+                botBrakeEffect.style.left = '470px';
+                botBrakeEffect.style.top = (botLanePositions[gameConfig.botLane] + 15) + 'px';
+            }
         }
         
         // Atualizar a dificuldade com base na distância
@@ -764,7 +991,7 @@
         
         // IA melhorada do bot
         function updateBot() {
-            if (!gameConfig.gameRunning) return;
+            if (!gameConfig.gameRunning || gameConfig.gameMode === 'multiplayer') return;
             
             increaseBotSpeed();
             
@@ -821,6 +1048,56 @@
                     gameConfig.lastBotMove = now;
                 }
             }
+            
+            // IA para turbo e freio do bot
+            if (gameConfig.gameMode === 'solo') {
+                const canTurbo = now - gameConfig.lastBotTurbo >= gameConfig.botTurboCooldown;
+                const canBrake = now - gameConfig.lastBotBrake >= gameConfig.botBrakeCooldown;
+                
+                if (canTurbo && Math.random() < 0.01) {
+                    activateBotTurbo();
+                }
+                
+                if (canBrake && Math.random() < 0.01) {
+                    activateBotBrake();
+                }
+            }
+        }
+        
+        // Ativar turbo do bot
+        function activateBotTurbo() {
+            if (!gameConfig.gameRunning) return;
+            
+            gameConfig.botSpeed = Math.min(gameConfig.botSpeed + gameConfig.playerAcceleration, gameConfig.maxSpeed);
+            gameConfig.lastBotTurbo = Date.now();
+            gameConfig.botTurboActive = true;
+            
+            // Mostrar efeito de turbo
+            botTurboEffect.style.opacity = '1';
+            setTimeout(() => {
+                gameConfig.botTurboActive = false;
+                botTurboEffect.style.opacity = '0';
+            }, gameConfig.turboEffectDuration);
+            
+            updateSpeedDisplays();
+        }
+        
+        // Ativar freio do bot
+        function activateBotBrake() {
+            if (!gameConfig.gameRunning) return;
+            
+            gameConfig.botSpeed = Math.max(gameConfig.botSpeed - gameConfig.decelerationRate, gameConfig.minSpeed);
+            gameConfig.lastBotBrake = Date.now();
+            gameConfig.botBrakeActive = true;
+            
+            // Mostrar efeito de freio
+            botBrakeEffect.style.opacity = '1';
+            setTimeout(() => {
+                gameConfig.botBrakeActive = false;
+                botBrakeEffect.style.opacity = '0';
+            }, gameConfig.brakeEffectDuration);
+            
+            updateSpeedDisplays();
         }
         
         // Aumentar velocidade do bot com o tempo
@@ -845,6 +1122,76 @@
             } else {
                 botCooldownDisplay.style.display = 'none';
             }
+        }
+        
+        // Atualizar cooldown do jogador
+        function updatePlayerCooldown() {
+            const now = Date.now();
+            
+            // Cooldown do turbo
+            const timeSinceLastTurbo = now - gameConfig.lastPlayerTurbo;
+            const turboCooldownPercent = (timeSinceLastTurbo / gameConfig.playerTurboCooldown) * 100;
+            
+            // Cooldown do freio
+            const timeSinceLastBrake = now - gameConfig.lastPlayerBrake;
+            const brakeCooldownPercent = (timeSinceLastBrake / gameConfig.playerBrakeCooldown) * 100;
+            
+            if (turboCooldownPercent < 100 || brakeCooldownPercent < 100) {
+                playerCooldownDisplay.style.display = 'block';
+                
+                // Mostrar o maior cooldown
+                if (turboCooldownPercent > brakeCooldownPercent) {
+                    playerCooldownFill.style.width = `${turboCooldownPercent}%`;
+                    playerCooldownFill.style.background = 'linear-gradient(to right, #0074D9, #4fe0ff)';
+                } else {
+                    playerCooldownFill.style.width = `${brakeCooldownPercent}%`;
+                    playerCooldownFill.style.background = 'linear-gradient(to right, #FF4136, #FF851B)';
+                }
+            } else {
+                playerCooldownDisplay.style.display = 'none';
+            }
+        }
+        
+        // Ativar turbo do jogador
+        function activatePlayerTurbo() {
+            if (!gameConfig.gameRunning) return;
+            
+            const now = Date.now();
+            if (now - gameConfig.lastPlayerTurbo < gameConfig.playerTurboCooldown) return;
+            
+            gameConfig.playerSpeed = Math.min(gameConfig.playerSpeed + gameConfig.playerAcceleration, gameConfig.maxSpeed);
+            gameConfig.lastPlayerTurbo = now;
+            gameConfig.playerTurboActive = true;
+            
+            // Mostrar efeito de turbo
+            playerTurboEffect.style.opacity = '1';
+            setTimeout(() => {
+                gameConfig.playerTurboActive = false;
+                playerTurboEffect.style.opacity = '0';
+            }, gameConfig.turboEffectDuration);
+            
+            updateSpeedDisplays();
+        }
+        
+        // Ativar freio do jogador
+        function activatePlayerBrake() {
+            if (!gameConfig.gameRunning) return;
+            
+            const now = Date.now();
+            if (now - gameConfig.lastPlayerBrake < gameConfig.playerBrakeCooldown) return;
+            
+            gameConfig.playerSpeed = Math.max(gameConfig.playerSpeed - gameConfig.decelerationRate, gameConfig.minSpeed);
+            gameConfig.lastPlayerBrake = now;
+            gameConfig.playerBrakeActive = true;
+            
+            // Mostrar efeito de freio
+            playerBrakeEffect.style.opacity = '1';
+            setTimeout(() => {
+                gameConfig.playerBrakeActive = false;
+                playerBrakeEffect.style.opacity = '0';
+            }, gameConfig.brakeEffectDuration);
+            
+            updateSpeedDisplays();
         }
         
         // Gerar obstáculos
@@ -1010,7 +1357,11 @@
                 playerImmunityIndicator.style.display = 'block';
                 
                 if (gameConfig.playerHealth <= 0) {
-                    endGame('Você perdeu! O bot venceu a corrida.');
+                    if (gameConfig.gameMode === 'solo') {
+                        endGame('Você perdeu! O bot venceu a corrida.');
+                    } else {
+                        endGame('Jogador 2 venceu a corrida!');
+                    }
                 }
             } else {
                 gameConfig.botHealth -= damage;
@@ -1024,7 +1375,11 @@
                 botImmunityIndicator.style.display = 'block';
                 
                 if (gameConfig.botHealth <= 0) {
-                    endGame('Parabéns! Você venceu o bot.');
+                    if (gameConfig.gameMode === 'solo') {
+                        endGame('Parabéns! Você venceu o bot.');
+                    } else {
+                        endGame('Jogador 1 venceu a corrida!');
+                    }
                 }
             }
         }
@@ -1059,7 +1414,12 @@
         // Atualizar displays de distância
         function updateDistanceDisplays() {
             playerDistanceDisplay.textContent = `Jogador: ${Math.floor(gameConfig.playerDistance)}m`;
-            botDistanceDisplay.textContent = `Bot: ${Math.floor(gameConfig.botDistance)}m`;
+            
+            if (gameConfig.gameMode === 'solo') {
+                botDistanceDisplay.textContent = `Bot: ${Math.floor(gameConfig.botDistance)}m`;
+            } else {
+                botDistanceDisplay.textContent = `Jogador 2: ${Math.floor(gameConfig.botDistance)}m`;
+            }
         }
         
         // Finalizar jogo
@@ -1086,6 +1446,8 @@
         function gameLoop() {
             if (gameConfig.gameRunning) {
                 gameConfig.playerDistance += gameConfig.playerSpeed * 0.1;
+                gameConfig.botDistance += gameConfig.botSpeed * 0.1;
+                
                 updateDistanceDisplays();
                 
                 updateDifficulty();
@@ -1097,6 +1459,8 @@
                 updateBot();
                 
                 checkImmunity();
+                
+                updatePlayerCooldown();
             }
             setTimeout(() => gameLoop(), 1000/60);
         }
@@ -1105,6 +1469,7 @@
         document.addEventListener('keydown', (e) => {
             if (!gameConfig.gameRunning) return;
             
+            // Controles do jogador 1
             if (e.key === 'w' || e.key === 'W') {
                 if (gameConfig.playerLane > 0) {
                     gameConfig.playerLane--;
@@ -1113,21 +1478,28 @@
                 if (gameConfig.playerLane < 2) {
                     gameConfig.playerLane++;
                 }
+            } else if (e.key === 'd' || e.key === 'D') {
+                activatePlayerTurbo();
+            } else if (e.key === 'a' || e.key === 'A') {
+                activatePlayerBrake();
             }
-        });
-        
-        accelerateBtn.addEventListener('click', () => {
-            if (!gameConfig.gameRunning) return;
             
-            gameConfig.playerSpeed = Math.min(gameConfig.playerSpeed + gameConfig.playerAcceleration, gameConfig.maxSpeed);
-            updateSpeedDisplays();
-        });
-        
-        decelerateBtn.addEventListener('click', () => {
-            if (!gameConfig.gameRunning) return;
-            
-            gameConfig.playerSpeed = Math.max(gameConfig.playerSpeed - gameConfig.decelerationRate, gameConfig.minSpeed);
-            updateSpeedDisplays();
+            // Controles do jogador 2 (modo multiplayer)
+            if (gameConfig.gameMode === 'multiplayer') {
+                if (e.key === 'ArrowUp') {
+                    if (gameConfig.botLane > 0) {
+                        gameConfig.botLane--;
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    if (gameConfig.botLane < 2) {
+                        gameConfig.botLane++;
+                    }
+                } else if (e.key === 'ArrowRight') {
+                    activateBotTurbo();
+                } else if (e.key === 'ArrowLeft') {
+                    activateBotBrake();
+                }
+            }
         });
         
         restartBtn.addEventListener('click', () => {
@@ -1135,12 +1507,22 @@
             gameOverDisplay.style.display = 'none';
         });
         
-       
+        soloModeBtn.addEventListener('click', () => {
+            gameConfig.gameMode = 'solo';
+            startScreen.style.display = 'none';
+            initGame();
+        });
+        
+        multiplayerModeBtn.addEventListener('click', () => {
+            gameConfig.gameMode = 'multiplayer';
+            startScreen.style.display = 'none';
+            initGame();
+        });
         
         // Simular carregamento
         setTimeout(() => {
             loadingScreen.style.display = 'none';
-            
+            startScreen.style.display = 'flex';
         }, 2000);
         
         // Inicializar o jogo
