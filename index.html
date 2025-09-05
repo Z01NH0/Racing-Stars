@@ -38,7 +38,7 @@
         
         #game-container {
             position: relative;
-            width: 1200px;
+            width: 1500px;
             height: 700px;
             border-radius: 15px;
             overflow: hidden;
@@ -734,11 +734,10 @@
         <div class="speed-container">
             <div class="player-speed">
                 <div>Jogador 1: <span id="player-speed">1.00</span>x</div>
-                <div> <span id="player-multiplier">1.0</span>x</div>
             </div>
             <div class="bot-speed">
                 <div> Jogador 2: <span id="bot-speed">1.00</span>x</div>
-                <div> <span id="bot-multiplier">1.0</span>x</div>
+                
             </div>
         </div>
     </div>
@@ -806,8 +805,6 @@
         const botHealthFill = document.getElementById('bot-health-fill');
         const playerSpeedDisplay = document.getElementById('player-speed');
         const botSpeedDisplay = document.getElementById('bot-speed');
-        const playerMultiplierDisplay = document.getElementById('player-multiplier');
-        const botMultiplierDisplay = document.getElementById('bot-multiplier');
         const botSpeedLabel = document.getElementById('bot-speed-label');
         const gameOverDisplay = document.getElementById('game-over');
         const playerResult = document.getElementById('player-result');
@@ -832,7 +829,7 @@
         const botBrakeEffect = document.getElementById('bot-brake');
         const victoryButton = document.getElementById('victory-button');
         
-        canvas.width = 1200;
+        canvas.width = 1500;
         canvas.height = 700;
         
         const playerLanePositions = [120, 220, 320];
@@ -1309,13 +1306,10 @@
             gameConfig.playerObstacleMultiplier = 1 + (playerDistanceLevel * 0.2);
             gameConfig.botObstacleMultiplier = 1 + (botDistanceLevel * 0.2);
             
-            updateMultiplierDisplays();
+          
         }
         
-        function updateMultiplierDisplays() {
-            playerMultiplierDisplay.textContent = gameConfig.playerObstacleMultiplier.toFixed(1);
-            botMultiplierDisplay.textContent = gameConfig.botObstacleMultiplier.toFixed(1);
-        }
+       
         
         function updateBot() {
             if (!gameConfig.gameRunning || gameConfig.gameMode === 'multiplayer' || gameConfig.botDefeated || gameConfig.botDead) return;
@@ -1558,7 +1552,7 @@
                 type: type,
                 area: inPlayerArea ? 'player' : 'bot',
                 lane: lane,
-                x: 1200,
+                x: 1500,
                 y: inPlayerArea ? playerLanePositions[lane] : botLanePositions[lane],
                 width: type === 'vertical' ? 30 : (type === 'oil' ? 60 : 40),
                 height: type === 'vertical' ? 100 : (type === 'oil' ? 30 : 30),
@@ -1592,7 +1586,7 @@
                 type: 'health',
                 area: inPlayerArea ? 'player' : 'bot',
                 lane: lane,
-                x: 1200,
+                x: 1500,
                 y: inPlayerArea ? playerLanePositions[lane] : botLanePositions[lane],
                 width: 30,
                 height: 30
