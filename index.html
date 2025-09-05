@@ -583,30 +583,30 @@
             transform: scale(1.05);
         }
         
-        /* Botões de controle para mobile */
-        .mobile-controls {
-            display: none;
+        /* Menu button */
+        #menu-button {
             position: absolute;
-            bottom: 20px;
-            width: 100%;
-            justify-content: space-around;
-            padding: 0 20px;
-            z-index: 30;
+            top: 5px;
+            left: 650px;
+            background: rgba(10, 15, 20, 0.9);
+            padding: 15px 25px;
+            border-radius: 12px;
+            z-index: 20;
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(79, 224, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            font-weight: bold;
+            font-size: 18px;
+            color: #4fe0ff;
+            cursor: pointer;
+            display: none;
+            pointer-events: auto;
+            text-align: center;
         }
         
-        .mobile-btn {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            background: rgba(79, 224, 255, 0.3);
-            border: 2px solid #4fe0ff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 24px;
-            color: white;
-            cursor: pointer;
-            user-select: none;
+        #menu-button:hover {
+            background: rgba(20, 30, 40, 0.9);
+            transform: scale(1.05);
         }
         
         @media (max-width: 1250px) {
@@ -626,10 +626,6 @@
                 flex-direction: column;
                 gap: 15px;
             }
-            
-            .mobile-controls {
-                display: flex;
-            }
         }
     </style>
 </head>
@@ -639,7 +635,8 @@
     <div id="game-container">
         <div id="loading-screen">
             <div class="loader"></div>
-            <h2>Carregando Pista...</h2>
+            <h2>PREPARANDO A PISTA</h2>
+            <p>Ajustando os motores e calibrando os pneus...</p>
             <div class="loading-dots">
                 <div class="dot"></div>
                 <div class="dot"></div>
@@ -707,8 +704,8 @@
             <div id="bot-turbo" class="turbo-effect"></div>
             <div id="bot-brake" class="brake-effect"></div>
             
-            <!-- Botão de vitória contra o bot -->
-            <div id="victory-button">Você ganhou! Finalizar corrida?</div>
+            <!-- Botão de menu -->
+            <div id="menu-button">Voltar ao Menu</div>
             
             <!-- Tela de game over -->
             <div id="game-over">
@@ -719,14 +716,6 @@
                 <button id="restart">Voltar ao Menu</button>
             </div>
         </div>
-        
-        <!-- Controles mobile -->
-        <div class="mobile-controls">
-            <div class="mobile-btn" id="mobile-up">▲</div>
-            <div class="mobile-btn" id="mobile-down">▼</div>
-            <div class="mobile-btn" id="mobile-left">◀</div>
-            <div class="mobile-btn" id="mobile-right">▶</div>
-        </div>
     </div>
     
     <!-- Display de velocidade -->
@@ -734,6 +723,7 @@
         <div class="speed-container">
             <div class="player-speed">
                 <div>Jogador 1: <span id="player-speed">1.00</span>x</div>
+                
             </div>
             <div class="bot-speed">
                 <div> Jogador 2: <span id="bot-speed">1.00</span>x</div>
@@ -796,7 +786,9 @@
             smokeParticles: [],
             stars: [],
             playerDead: false,
-            botDead: false
+            botDead: false,
+            playerReached2000: false,
+            botReached2000: false
         };
         
         const canvas = document.getElementById('game-canvas');
@@ -805,7 +797,6 @@
         const botHealthFill = document.getElementById('bot-health-fill');
         const playerSpeedDisplay = document.getElementById('player-speed');
         const botSpeedDisplay = document.getElementById('bot-speed');
-        const botSpeedLabel = document.getElementById('bot-speed-label');
         const gameOverDisplay = document.getElementById('game-over');
         const playerResult = document.getElementById('player-result');
         const botResult = document.getElementById('bot-result');
@@ -827,7 +818,7 @@
         const playerBrakeEffect = document.getElementById('player-brake');
         const botTurboEffect = document.getElementById('bot-turbo');
         const botBrakeEffect = document.getElementById('bot-brake');
-        const victoryButton = document.getElementById('victory-button');
+        const menuButton = document.getElementById('menu-button');
         
         canvas.width = 1500;
         canvas.height = 700;
@@ -872,6 +863,8 @@
             gameConfig.stars = [];
             gameConfig.playerDead = false;
             gameConfig.botDead = false;
+            gameConfig.playerReached2000 = false;
+            gameConfig.botReached2000 = false;
             
             // Criar estrelas de fundo
             for (let i = 0; i < 100; i++) {
@@ -896,15 +889,9 @@
             playerBrakeEffect.style.opacity = '0';
             botTurboEffect.style.opacity = '0';
             botBrakeEffect.style.opacity = '0';
-            victoryButton.style.display = 'none';
+            menuButton.style.display = 'block';
             
             gameOverDisplay.style.display = 'none';
-            
-            if (gameConfig.gameMode === 'multiplayer') {
-                botSpeedLabel.textContent = 'Jogador 2: ';
-            } else {
-                botSpeedLabel.textContent = 'Bot: ';
-            }
             
             createParticles();
         }
@@ -964,6 +951,17 @@
         }
         
         function drawRoad() {
+            // Verificar se algum jogador atingiu 2000m
+            if (gameConfig.playerDistance >= 2000 && !gameConfig.playerReached2000) {
+                gameConfig.playerReached2000 = true;
+                gameConfig.obstacleFrequency = Math.max(gameConfig.minObstacleFrequency, gameConfig.obstacleFrequency / 3);
+            }
+            
+            if (gameConfig.botDistance >= 2000 && !gameConfig.botReached2000) {
+                gameConfig.botReached2000 = true;
+                gameConfig.obstacleFrequency = Math.max(gameConfig.minObstacleFrequency, gameConfig.obstacleFrequency / 3);
+            }
+            
             // Asfalto - gradiente para efeito de profundidade
             const roadGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
             roadGradient.addColorStop(0, '#2c3e50');
@@ -971,17 +969,18 @@
             roadGradient.addColorStop(1, '#2c3e50');
             
             // Pista do jogador
-            ctx.fillStyle = roadGradient;
+            ctx.fillStyle = gameConfig.playerReached2000 ? '#8B0000' : roadGradient;
             ctx.fillRect(0, 70, canvas.width, 300);
             
             // Pista do bot
+            ctx.fillStyle = gameConfig.botReached2000 ? '#8B0000' : roadGradient;
             ctx.fillRect(0, 370, canvas.width, 300);
             
             // Marcas de pista - jogador
             gameConfig.roadOffsetPlayer += gameConfig.playerSpeed * 0.8;
             if (gameConfig.roadOffsetPlayer >= 60) gameConfig.roadOffsetPlayer = 0;
             
-            ctx.strokeStyle = '#ecf0f1';
+            ctx.strokeStyle = gameConfig.playerReached2000 ? '#FF4500' : '#ecf0f1';
             ctx.lineWidth = 4;
             ctx.setLineDash([30, 30]);
             ctx.lineDashOffset = -gameConfig.roadOffsetPlayer * -10;
@@ -997,6 +996,7 @@
             gameConfig.roadOffsetBot += gameConfig.botSpeed * 0.8;
             if (gameConfig.roadOffsetBot >= 60) gameConfig.roadOffsetBot = 0;
             
+            ctx.strokeStyle = gameConfig.botReached2000 ? '#FF4500' : '#ecf0f1';
             ctx.lineDashOffset = -gameConfig.roadOffsetBot * -10;
             
             for (let i = 0; i < 3; i++) {
@@ -1306,13 +1306,13 @@
             gameConfig.playerObstacleMultiplier = 1 + (playerDistanceLevel * 0.2);
             gameConfig.botObstacleMultiplier = 1 + (botDistanceLevel * 0.2);
             
-          
+           
         }
         
        
         
         function updateBot() {
-            if (!gameConfig.gameRunning || gameConfig.gameMode === 'multiplayer' || gameConfig.botDefeated || gameConfig.botDead) return;
+            if (!gameConfig.gameRunning || gameConfig.gameMode === 'multiplayer' || gameConfig.botDead) return;
             
             increaseBotSpeed();
             
@@ -1409,7 +1409,7 @@
         }
         
         function activateBotTurbo() {
-            if (!gameConfig.gameRunning || gameConfig.botDefeated || gameConfig.botDead) return;
+            if (!gameConfig.gameRunning || gameConfig.botDead) return;
             
             gameConfig.botSpeed = Math.min(gameConfig.botSpeed + gameConfig.playerAcceleration, gameConfig.maxSpeed);
             gameConfig.lastBotTurbo = Date.now();
@@ -1426,7 +1426,7 @@
         }
         
         function activateBotBrake() {
-            if (!gameConfig.gameRunning || gameConfig.botDefeated || gameConfig.botDead) return;
+            if (!gameConfig.gameRunning || gameConfig.botDead) return;
             
             gameConfig.botSpeed = Math.max(gameConfig.botSpeed - gameConfig.decelerationRate, gameConfig.minSpeed);
             gameConfig.lastBotBrake = Date.now();
@@ -1766,7 +1766,7 @@
                         }
                     }
                     
-                    if (obstacle.area === 'bot' && !gameConfig.botDefeated && !gameConfig.botDead) {
+                    if (obstacle.area === 'bot' && !gameConfig.botDead) {
                         // Para obstáculos verticais, verificar todas as pistas
                         const affectsBot = obstacle.type !== 'vertical' ? 
                             (obstacle.lane === gameConfig.botLane) : 
@@ -1890,8 +1890,15 @@
                     gameConfig.playerSpeed = 0;
                     updateSpeedDisplays();
                     
+                    // No modo solo, quando o jogador morre, finaliza o jogo imediatamente
                     if (gameConfig.gameMode === 'solo') {
-                        endGame('Você perdeu! Seu Carro foi Destruido!');
+                        let winnerMessage = "";
+                        if (gameConfig.playerDistance > gameConfig.botDistance) {
+                            winnerMessage = "Você ultrapassou os obstáculos e alcançou a maior distância, Vitória!";
+                        } else {
+                            winnerMessage = "Jogador 2 te deixou comendo poeira! Melhor sorte na próxima!";
+                        }
+                        endGame(winnerMessage);
                     } else {
                         checkMultiplayerEnd();
                     }
@@ -1906,15 +1913,15 @@
                 gameConfig.botImmunityTime = Date.now();
                 botImmunityIndicator.style.display = 'block';
                 
-                if (gameConfig.botHealth <= 0 && gameConfig.gameMode === 'solo') {
-                    gameConfig.botDefeated = true;
-                    victoryButton.style.display = 'block';
-                    victoryButton.style.pointerEvents = 'auto';
-                } else if (gameConfig.botHealth <= 0) {
+                if (gameConfig.botHealth <= 0) {
                     gameConfig.botDead = true;
                     gameConfig.botSpeed = 0;
                     updateSpeedDisplays();
-                    checkMultiplayerEnd();
+                    
+                    // No modo multiplayer, verificar se ambos morreram
+                    if (gameConfig.gameMode === 'multiplayer') {
+                        checkMultiplayerEnd();
+                    }
                 }
             }
         }
@@ -1965,18 +1972,13 @@
         
         function updateDistanceDisplays() {
             playerDistanceDisplay.textContent = `Jogador: ${Math.floor(gameConfig.playerDistance)}m`;
-            
-            if (gameConfig.gameMode === 'solo') {
-                botDistanceDisplay.textContent = `Bot: ${Math.floor(gameConfig.botDistance)}m`;
-            } else {
-                botDistanceDisplay.textContent = `Jogador 2: ${Math.floor(gameConfig.botDistance)}m`;
-            }
+            botDistanceDisplay.textContent = `Jogador 2: ${Math.floor(gameConfig.botDistance)}m`;
         }
         
         function endGame(message) {
             gameConfig.gameRunning = false;
             playerResult.textContent = `Jogador 1: ${Math.floor(gameConfig.playerDistance)}m`;
-            botResult.textContent = `Bot: ${Math.floor(gameConfig.botDistance)}m`;
+            botResult.textContent = `Jogador 2: ${Math.floor(gameConfig.botDistance)}m`;
             winnerDisplay.textContent = message;
             gameOverDisplay.style.display = 'block';
         }
@@ -1989,7 +1991,7 @@
             drawPowerUps();
             drawSmoke();
             if (!gameConfig.playerDead) drawPlayerCar();
-            if (!gameConfig.botDefeated && !gameConfig.botDead) drawBotCar();
+            if (!gameConfig.botDead) drawBotCar();
             drawParticles();
             
             requestAnimationFrame(render);
@@ -2101,11 +2103,14 @@
         restartBtn.addEventListener('click', () => {
             gameOverDisplay.style.display = 'none';
             startScreen.style.display = 'flex';
+            menuButton.style.display = 'none';
         });
         
-        victoryButton.addEventListener('click', () => {
-            endGame('Parabéns! Você Ganhou a Corrida!');
-            victoryButton.style.display = 'none';
+        menuButton.addEventListener('click', () => {
+            gameConfig.gameRunning = false;
+            gameOverDisplay.style.display = 'none';
+            startScreen.style.display = 'flex';
+            menuButton.style.display = 'none';
         });
         
         soloModeBtn.addEventListener('click', () => {
@@ -2118,27 +2123,6 @@
             gameConfig.gameMode = 'multiplayer';
             startScreen.style.display = 'none';
             initGame();
-        });
-        
-        // Controles mobile
-        document.getElementById('mobile-up').addEventListener('click', () => {
-            if (gameConfig.playerLane > 0 && !gameConfig.playerDead) {
-                gameConfig.playerLane--;
-            }
-        });
-        
-        document.getElementById('mobile-down').addEventListener('click', () => {
-            if (gameConfig.playerLane < 2 && !gameConfig.playerDead) {
-                gameConfig.playerLane++;
-            }
-        });
-        
-        document.getElementById('mobile-left').addEventListener('click', () => {
-            activatePlayerBrake();
-        });
-        
-        document.getElementById('mobile-right').addEventListener('click', () => {
-            activatePlayerTurbo();
         });
         
         // Esconder botões durante o carregamento
