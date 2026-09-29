@@ -1,12 +1,12 @@
 /*
- * ZOINHO Storage Bridge v2 — Racing Stars Cloud v1.0.0
+ * ZOINHO Storage Bridge v2 — Racing Stars Cloud v1.1.1
  *
  * Cloud: créditos, carros comprados e tuning.
- * Local por dispositivo: seleção de carro, modo/pista/voltas/dificuldade, visual,
- * minimapa, efeitos, teclado, controles e deadzone.
+ * Local por dispositivo: seleção de carro, modo/pista/voltas/dificuldade, vídeo,
+ * minimapa, teclado/gamepad/deadzone e toda a configuração de áudio da v34.
  *
- * Este arquivo também migra o save legado monolítico antes da bridge capturar o
- * estado inicial. Assim preferências locais nunca sobem para a nuvem por acidente.
+ * Este arquivo também migra o save monolítico legado antes da bridge capturar o
+ * estado inicial. Preferências locais nunca sobem para a nuvem por acidente.
  */
 (() => {
   'use strict';
@@ -14,7 +14,8 @@
   const PROGRESS_KEY = 'racingStars3DReborn_v1';
   const SETTINGS_KEY = 'racingStars3DReborn_settings_v1';
   const BACKUP_KEY = `${PROGRESS_KEY}:backup`;
-  const PRECLOUD_BACKUP_KEY = `${PROGRESS_KEY}:precloud-v31`;
+  const PRECLOUD_BACKUP_KEY = `${PROGRESS_KEY}:precloud-v34`;
+  const RESTORED_KEY = 'zoinhoBridgeRestored:racing-stars';
   const CAR_PRICES = Object.freeze({
     pulse: 0,
     comet: 3200,
@@ -42,36 +43,28 @@
   };
 
   function migrateLegacyStorage() {
-    const primaryRaw = localStorage.getItem(PROGRESS_KEY);
-    const backupRaw = localStorage.getItem(BACKUP_KEY);
-    let source = readJson(PROGRESS_KEY) || readJson(BACKUP_KEY);
-    if (!source) return;
-
-    const alreadySplit = !Object.prototype.hasOwnProperty.call(source, 'settings')
-      && !Object.prototype.hasOwnProperty.call(source, 'selected')
-      && !Object.prototype.hasOwnProperty.call(source, 'mode');
-    if (alreadySplit) return;
-
+    let primaryRaw = null;
+    let backupRaw = null;
+    let restoredFromCloudThisLoad = false;
     try {
-      if (!localStorage.getItem(PRECLOUD_BACKUP_KEY)) {
-        const legacy = primaryRaw || backupRaw;
-        if (legacy) localStorage.setItem(PRECLOUD_BACKUP_KEY, legacy);
-      }
+      primaryRaw = localStorage.getItem(PROGRESS_KEY);
+      backupRaw = localStorage.getItem(BACKUP_KEY);
+      restoredFromCloudThisLoad = sessionStorage.getItem(RESTORED_KEY) === '1';
     } catch {}
 
-    if (!readJson(SETTINGS_KEY)) {
-      writeJson(SETTINGS_KEY, {
-        schemaVersion: 1,
-        selected: source.selected,
-        p2: source.p2,
-        mode: source.mode,
-        track: source.track,
-        laps: source.laps,
-        diff: source.diff,
-        withBots: source.withBots,
-        settings: object(source.settings) || {}
-      });
-    }
+    const primary = readJson(PROGRESS_KEY);
+    const backup = readJson(BACKUP_KEY);
+    const source = primary || backup;
+    if (!source) return;
+
+    const hasLegacyPreferences = Object.prototype.hasOwnProperty.call(source, 'settings')
+      || Object.prototype.hasOwnProperty.call(source, 'selected')
+      || Object.prototype.hasOwnProperty.call(source, 'p2')
+      || Object.prototype.hasOwnProperty.call(source, 'mode')
+      || Object.prototype.hasOwnProperty.call(source, 'track')
+      || Object.prototype.hasOwnProperty.call(source, 'laps')
+      || Object.prototype.hasOwnProperty.call(source, 'diff')
+      || Object.prototype.hasOwnProperty.call(source, 'withBots');
 
     const progress = {
       schemaVersion: 3,
@@ -79,7 +72,48 @@
       owned: Array.isArray(source.owned) ? source.owned : ['pulse'],
       tuning: object(source.tuning) || {}
     };
-    writeJson(PROGRESS_KEY, progress);
+
+    if (!hasLegacyPreferences) {
+      // O :backup também é uma fonte de recuperação. Se a chave principal sumiu ou
+      // ficou ilegível, reconstituímos a primária ANTES da bridge capturar bootLocalState.
+      if (!primary && backup) writeJson(PROGRESS_KEY, progress);
+      if (!backup && primary) writeJson(BACKUP_KEY, progress);
+      return;
+    }
+
+    try {
+      if (!restoredFromCloudThisLoad && !localStorage.getItem(PRECLOUD_BACKUP_KEY)) {
+        // Guarda sempre a fonte JSON válida escolhida, nunca um primaryRaw corrompido.
+        const legacy = primary ? primaryRaw : backupRaw;
+        if (legacy) localStorage.setItem(PRECLOUD_BACKUP_KEY, legacy);
+      }
+    } catch {}
+
+    // Preferências pertencem ao dispositivo. Se este documento veio de um restore
+    // Cloud controlado, o payload remoto pode ser um save monolítico legado; nesse
+    // caso nós o sanitizamos, mas NÃO importamos áudio/controles/vídeo do outro PC.
+    if (!restoredFromCloudThisLoad) {
+      const previousLocal = readJson(SETTINGS_KEY) || {};
+      const previousSettings = object(previousLocal.settings) || {};
+      const sourceSettings = object(source.settings) || {};
+      const localPayload = {
+        schemaVersion: 2,
+        selected: source.selected ?? previousLocal.selected,
+        p2: source.p2 ?? previousLocal.p2,
+        mode: source.mode ?? previousLocal.mode,
+        track: source.track ?? previousLocal.track,
+        laps: source.laps ?? previousLocal.laps,
+        diff: source.diff ?? previousLocal.diff,
+        withBots: typeof source.withBots === 'boolean' ? source.withBots : previousLocal.withBots,
+        settings: { ...previousSettings, ...sourceSettings }
+      };
+
+      // Não destruímos o save monolítico enquanto as preferências não estiverem
+      // preservadas. Se o storage estiver indisponível, a migração fica para depois.
+      if (!writeJson(SETTINGS_KEY, localPayload)) return;
+    }
+
+    if (!writeJson(PROGRESS_KEY, progress)) return;
     writeJson(BACKUP_KEY, progress);
   }
 
@@ -131,8 +165,8 @@
   }
 
   // > 0 = LOCAL mais avançado; < 0 = REMOTO mais avançado.
-  // lifetimeValue recompõe créditos atuais + tudo que já foi gasto em garagem/tuning,
-  // então comprar um carro não faz um save legítimo parecer regressão.
+  // O valor vitalício recompõe créditos atuais + o investimento realizado em
+  // carros/tuning, então gastar créditos em progresso nunca parece regressão.
   function compareProgress(localStorageState, remoteStorageState) {
     try {
       const local = metrics(localStorageState);
