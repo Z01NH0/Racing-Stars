@@ -329,8 +329,8 @@ body.racing #snowSquallFx{display:block}
 </div></div></div></section>
 <section id="resultScreen" class="screen hidden"><div class="result"><div class="resultEmblem"><span class="uiIcon" data-ui-icon="trophy" aria-hidden="true"></span></div><span class="eyebrow">Bandeirada / resultado oficial</span><h1 id="resultTitle">Corrida concluída</h1><div class="podium" id="podium"></div><div class="resultStats"><div><span class="uiIcon" data-ui-icon="credit" aria-hidden="true"></span><b id="resultCredits">+0</b><span>créditos</span></div><div><span class="uiIcon" data-ui-icon="clock" aria-hidden="true"></span><b id="resultTime">0:00</b><span>tempo</span></div><div><span class="uiIcon" data-ui-icon="route" aria-hidden="true"></span><b id="resultTrack">Neon Vector City</b><span>circuito</span></div></div><div class="actions"><button class="btn primary" id="againBtn"><span class="uiIcon" data-ui-icon="retry" aria-hidden="true"></span> Correr de novo</button><button class="btn" id="menuBtn"><span class="uiIcon" data-ui-icon="home" aria-hidden="true"></span> Menu</button></div></div></section>
 
-<script src="zoinho-storage-config.js?v=cloud-1.2.0-shell"></script>
-<script src="zoinho-storage-bridge.js?v=cloud-1.2.0-shell"></script>
+<script src="zoinho-storage-config.js?v=cloud-1.2.1-shell-audio"></script>
+<script src="zoinho-storage-bridge.js?v=cloud-1.2.1-shell-audio"></script>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 
@@ -2919,7 +2919,14 @@ const EngineAudio=(()=>{
   diagnostics:()=>({available:!!ctx,contextState:ctx?.state||'not-created',voices:voices.size,preview:preview?.id||null,failed,mix:[...mixes].map(([id,m])=>({id,...m})),engines:[...voices].map(([id,v])=>({id,gear:v.state.gear,rpm:v.state.rpm}))})};
 })();
 
-GameAudio.install();EngineAudio.install();persist('boot-normalize',false);initMenuDesign();makePreview();applySettings();updateControlLabels();setTutorialTab(tutorialTab);refreshMenu();chooseMenuTheme();canvas.style.opacity='0';
+GameAudio.install();EngineAudio.install();
+const ZOINHO_SHELL_AUTOPLAY=new URLSearchParams(location.search).get('zoinhoShell')==='1'&&new URLSearchParams(location.search).get('zoinhoAutoplay')==='1';
+if(ZOINHO_SHELL_AUTOPLAY){
+ queueMicrotask(()=>{
+  void GameAudio.unlock().then(ok=>{if(ok)return GameAudio.syncUiMusic()}).catch(()=>{});
+ });
+}
+persist('boot-normalize',false);initMenuDesign();makePreview();applySettings();updateControlLabels();setTutorialTab(tutorialTab);refreshMenu();chooseMenuTheme();canvas.style.opacity='0';
 let last=performance.now(),acc=0,lastGamepadPoll=0,lastLoadingPaint=0,lastMenuPaint=0,lastSelectionPaint=0,lastGaragePaint=0;function loop(now){requestAnimationFrame(loop);const frameMs=Math.max(0,now-last),elapsed=frameMs/1000,raw=Math.min(MAX_FRAME_DELTA,elapsed);last=now;GameAudio.update(raw);EngineAudio.update(raw);const inputInterval=race.running?0:33;if(inputInterval===0||now-lastGamepadPoll>=inputInterval){lastGamepadPoll=now;refreshGamepads();pollGamepadCapture();pollGamepadUi();updateGamepadLiveUi(now);if(pauseSettingsOpen)updatePauseGamepadLiveUi(now)}if(race.loading){acc=0;if(now-lastLoadingPaint>=33){lastLoadingPaint=now;renderLoadingCanvas(now)}return}if(race.running){if(!race.paused){if(elapsed>raw)perfMonitor.droppedSimulationSteps+=Math.floor((elapsed-raw)/STEP);acc+=raw;let n=0;while(acc>=STEP&&n<MAX_CATCHUP_STEPS&&race.running){updateRace(STEP,now*.001);acc-=STEP;n++}if(acc>=STEP){const dropped=Math.floor(acc/STEP);perfMonitor.droppedSimulationSteps+=dropped;acc-=dropped*STEP}}else acc=0;presentRace(raw,now*.001);renderRace(raw,now);renderV26Snow(now,elapsed);recordFramePerformance(frameMs)}else{if(uiState==='garage'&&now-lastGaragePaint>=22){lastGaragePaint=now;renderPreview(now)}else if(uiState==='menu'&&now-lastMenuPaint>=33){lastMenuPaint=now;renderMenuCanvas(now);renderHomePreview(now)}if(uiState==='carSelect'&&now-lastSelectionPaint>=33){lastSelectionPaint=now;renderSelectionPreviews(now)}}}requestAnimationFrame(loop);
 addEventListener('resize',()=>{rw=0;rh=0;if(minimapCache)minimapCache.baseKey='';minimapLastPaint=0;ensureSize()});
 </script>
