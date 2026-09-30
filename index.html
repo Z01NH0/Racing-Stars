@@ -329,8 +329,8 @@ body.racing #snowSquallFx{display:block}
 </div></div></div></section>
 <section id="resultScreen" class="screen hidden"><div class="result"><div class="resultEmblem"><span class="uiIcon" data-ui-icon="trophy" aria-hidden="true"></span></div><span class="eyebrow">Bandeirada / resultado oficial</span><h1 id="resultTitle">Corrida concluída</h1><div class="podium" id="podium"></div><div class="resultStats"><div><span class="uiIcon" data-ui-icon="credit" aria-hidden="true"></span><b id="resultCredits">+0</b><span>créditos</span></div><div><span class="uiIcon" data-ui-icon="clock" aria-hidden="true"></span><b id="resultTime">0:00</b><span>tempo</span></div><div><span class="uiIcon" data-ui-icon="route" aria-hidden="true"></span><b id="resultTrack">Neon Vector City</b><span>circuito</span></div></div><div class="actions"><button class="btn primary" id="againBtn"><span class="uiIcon" data-ui-icon="retry" aria-hidden="true"></span> Correr de novo</button><button class="btn" id="menuBtn"><span class="uiIcon" data-ui-icon="home" aria-hidden="true"></span> Menu</button></div></div></section>
 
-<script src="zoinho-storage-config.js?v=cloud-1.2.1-shell-audio"></script>
-<script src="zoinho-storage-bridge.js?v=cloud-1.2.1-shell-audio"></script>
+<script src="zoinho-storage-config.js?v=cloud-1.2.2-shell-audio-motor"></script>
+<script src="zoinho-storage-bridge.js?v=cloud-1.2.2-shell-audio-motor"></script>
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js';
 
@@ -2094,7 +2094,7 @@ async function startRace(){
   setLoadingProgress(89,'Visitando distritos e biomas');if(!await warmupWorldZones(token))return;
   setLoadingProgress(95,'Aquecendo GPU e sombras estaticas');if(!await warmupRaceRenderer(token,5))return;if(typeof finishPowerPrewarm==='function')finishPowerPrewarm();renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=false;
   setLoadingProgress(98,'Estabilizando memoria, cameras e audio');await Promise.all([raceAudioReady,waitMs(Math.max(240,1850-(performance.now()-loadingStarted)))]);if(token!==loadingToken)return;
-  setLoadingProgress(100,'Grid pronto');await nextFrame();load.classList.add('closing');await waitMs(360);if(token!==loadingToken)return;load.classList.add('hidden');load.classList.remove('closing');race.loading=false;race.elapsed=0;race.countdown=RACE_COUNTDOWN_DURATION;resetRacePresentation();resetPerformanceMonitor();clearKeys();GameAudio.startRace(track.def.theme)
+  setLoadingProgress(100,'Grid pronto');await nextFrame();load.classList.add('closing');await waitMs(360);if(token!==loadingToken)return;load.classList.add('hidden');load.classList.remove('closing');race.loading=false;race.elapsed=0;race.countdown=RACE_COUNTDOWN_DURATION;resetRacePresentation();resetPerformanceMonitor();clearKeys();GameAudio.startRace(track.def.theme);EngineAudio.sync()
  }
  catch(err){console.error('Falha ao iniciar corrida:',err);race.running=false;race.loading=false;race.paused=false;document.body.classList.remove('racing');load.classList.add('hidden');$('#hud').style.display='none';canvas.style.opacity='0';showUi('menuScreen','menu');try{if(typeof resetPowerRuntimePools==='function')resetPowerRuntimePools();if(scene){disposeScene(scene);scene=null}renderer.renderLists.dispose()}catch(_){}track=null;minimapCache=null;cars=[];humans=[];aiCars=[];pickups=[];powerBoxes=[];powerEntities=[];powerFx=[];courseReservations=[];hazards=[];environment=[];sceneryAnimators=[];resetWorldRuntime();GameAudio.enterMenu();flashBanner('ERRO AO INICIAR · RECARREGUE A PÁGINA')}
  finally{if(typeof finishPowerPrewarm==='function')finishPowerPrewarm()}
@@ -2845,10 +2845,11 @@ const EngineAudio=(()=>{
     // Let the loading overlay paint before the one-time waveform preparation.
     preparing=new Promise(resolve=>setTimeout(()=>{try{assets=EngineSound.createAssets(ctx);resolve(true)}catch(e){failed=true;console.warn('Falha ao preparar motores',e);resolve(false)}},0));
    }
-   // resume() must be issued in the original gesture, before awaiting assets.
-   if(ctx.state!=='running')ctx.resume().catch(()=>{});
+   // Resume before awaiting waveform preparation. In the Game Shell this is attempted at boot;
+   // on restrictive browsers the existing pointer/keyboard listeners remain the retry path.
+   if(ctx.state!=='running'){try{await ctx.resume()}catch{}}
    if(preparing)await preparing;
-   return !!assets;
+   return !!assets&&ctx.state==='running';
   }catch(error){failed=true;console.warn('Áudio dos motores indisponível',error);return false}
  }
  function dropVoices(){for(const v of voices.values())v.dispose();voices.clear();mixes.clear();accumulator=0}
@@ -2923,7 +2924,10 @@ GameAudio.install();EngineAudio.install();
 const ZOINHO_SHELL_AUTOPLAY=new URLSearchParams(location.search).get('zoinhoShell')==='1'&&new URLSearchParams(location.search).get('zoinhoAutoplay')==='1';
 if(ZOINHO_SHELL_AUTOPLAY){
  queueMicrotask(()=>{
+  // Music/effects and procedural engines use independent AudioContexts.
+  // Prime both while the Shell autoplay policy is active; each keeps its own gesture fallback.
   void GameAudio.unlock().then(ok=>{if(ok)return GameAudio.syncUiMusic()}).catch(()=>{});
+  void EngineAudio.unlock().then(ok=>{if(ok)EngineAudio.sync()}).catch(()=>{});
  });
 }
 persist('boot-normalize',false);initMenuDesign();makePreview();applySettings();updateControlLabels();setTutorialTab(tutorialTab);refreshMenu();chooseMenuTheme();canvas.style.opacity='0';
