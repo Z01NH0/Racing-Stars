@@ -1,4 +1,4 @@
-/* ZOINHO Storage Bridge v2 — Game Shell host support (parent + opener). */
+/* ZOINHO Storage Bridge v2 — Racing Stars v1.3.0 · Game Shell host support (parent + opener). */
 (() => {
   'use strict';
 

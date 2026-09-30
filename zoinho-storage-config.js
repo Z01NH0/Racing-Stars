@@ -1,5 +1,5 @@
 /*
- * ZOINHO Storage Bridge v2 — Racing Stars Cloud v1.1.1
+ * ZOINHO Storage Bridge v2 — Racing Stars Cloud v1.3.0
  *
  * Cloud: créditos, carros comprados e tuning.
  * Local por dispositivo: seleção de carro, modo/pista/voltas/dificuldade, vídeo,
